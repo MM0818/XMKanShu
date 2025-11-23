@@ -249,16 +249,30 @@ public class ReadingActivity extends AppCompatActivity {
                 GlobalConfig.BookUrl = "";
             }
             Intent intent = getIntent();
-            GlobalConfig.BookUrl=intent.getStringExtra("link");
+            String bookUrl = intent.getStringExtra("link");
             GlobalConfig.chapternum=intent.getIntExtra("chapternum",0);
+
+            // 新增日志：打印BookUrl的真实值（带引号，方便看是否有多余斜杠或空格）
+            Log.d("URL_DEBUG", "BookUrl的值：\"" + GlobalConfig.BookUrl + "\"");
+
+            // 关键修复：去除 bookUrl 开头的所有斜杠（避免拼接后出现//）
+            if (bookUrl != null) {
+                bookUrl = bookUrl.replaceAll("^/+", ""); // 替换开头1个或多个/为空
+            } else {
+                bookUrl = "";
+            }
+            GlobalConfig.BookUrl = bookUrl; // 更新全局变量
+
+            // 拼接最终 URL（新域名，确保只有单斜杠）
+            String targetUrl = "https://www.uuubqg.cc/" + bookUrl;
+            Log.d("URL_DEBUG", "修复后最终URL：\"" + targetUrl + "\"");
+
             ReadConfig.ReadSetting(ReadingActivity.this);
-            initContent("https://www.biqugeu.net/"+GlobalConfig.BookUrl, GlobalConfig.chapternum);
+
+            // 关键修正：传入新域名 targetUrl，不再拼接旧域名！
+            initContent(targetUrl, GlobalConfig.chapternum);
+
             mReadPresenter = new ReadPresenter(ReadingActivity.this);
-//            if (!ReadConfig.isDark) {
-//                intChapterStyle(R.color.default_read_color, R.color.default_font_color);
-//            } else {
-//                intChapterStyle(R.color.default_read_color, R.color.dark_font_color);
-//            }
             mReadPresenter.LoadChapterContent();
             return null;
         }

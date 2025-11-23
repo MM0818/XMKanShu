@@ -164,7 +164,7 @@ public class GetBook {
         String link;//书链接
         list=new ArrayList<HashMap<String, String>>();
         try{
-            alldoc= Jsoup.connect("http://www.biqugeu.net/").data("query", "Java").userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36").get();
+            alldoc= Jsoup.connect("http://www.uuubqg.cc/").data("query", "Java").userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36").get();
             Elements listClass = alldoc.getElementsByAttributeValue("class", "item");
             for(Element listitem:listClass)
             {
@@ -230,7 +230,7 @@ public class GetBook {
         final ArrayList<HashMap<String,String>>list;
         list=new ArrayList<HashMap<String, String>>();
         try{
-            alldoc= Jsoup.connect("http://www.biqugeu.net/").data("query", "Java").userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36").get();
+            alldoc= Jsoup.connect("http://www.uuubqg.cc/").data("query", "Java").userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36").get();
 //            Elements listClass=alldoc.getElementsByAttributeValue("class","r");
             Elements listClass=alldoc.select("#hotcontent > div.r > ul:nth-child(4) > li");
             for(Element listitem:listClass) {
@@ -287,7 +287,7 @@ public class GetBook {
         ArrayList<HashMap<String,String>>list;
         list=new ArrayList<HashMap<String, String>>();
         try{
-            alldoc= Jsoup.connect("http://www.biqugeu.net/").data("query", "Java").userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36").get();
+            alldoc= Jsoup.connect("http://www.uuubqg.cc/").data("query", "Java").userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36").get();
 //            Elements listClass=alldoc.getElementsByAttributeValue("class","r");
             Elements listClass=alldoc.select("#newscontent > div.r > ul > li");
             for(Element listitem:listClass)
@@ -343,7 +343,7 @@ public class GetBook {
         String newchapterlink="";  //最新章节链接
         int chapternum=0; //总章节
         try{
-            alldoc= Jsoup.connect("https://www.biqugeu.net/"+url+"/").data("query", "Java").userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36").get();
+            alldoc= Jsoup.connect("https://www.uuubqg.cc/"+url+"/").data("query", "Java").userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36").get();
             name=alldoc.select("#info > h1").text().trim();
             author=alldoc.select("#info > p:nth-child(2)").text().trim().replace("作 者：","");
             lasttime=alldoc.select("#info > p:nth-child(4)").text().trim().replace("最后更新：","");

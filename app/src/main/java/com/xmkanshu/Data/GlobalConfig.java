@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.provider.Settings;
 import android.view.WindowManager;
 
+import com.xmkanshu.Model.Chapter;
 import com.xmkanshu.greendao.model.Bookinfodb;
 
 import java.util.ArrayList;
@@ -47,7 +48,11 @@ public class GlobalConfig {
     public static int chapternum=0; //书籍总章节
     public static Bitmap bitmapnull=null;
     //    public static int sysLight=0;//系统亮度
-    public static ArrayList<ConcurrentHashMap<String, String>> list =new ArrayList<ConcurrentHashMap<String, String>>();
+    // 原错误定义（存储 ConcurrentHashMap）：
+    // public static ArrayList<ConcurrentHashMap<String, String>> list = new ArrayList<>();
+
+    // 修正后（存储 Chapter 对象）：
+    public static ArrayList<Chapter> list = new ArrayList<>(); // 泛型改为 Chapter
 //    public static Map<String,BookChapter> bookchapter=new HashMap<String,BookChapter>();
     public static List<Bookinfodb> booklist;
 
@@ -120,7 +125,7 @@ public class GlobalConfig {
         }
         else
         {
-            url3="https://www.biqugeu.net"+url;
+            url3="https://www.uuubqg.cc"+url;
             return url3;
         }
     }

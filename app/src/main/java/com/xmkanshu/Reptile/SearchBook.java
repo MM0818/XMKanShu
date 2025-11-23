@@ -29,7 +29,7 @@ public class SearchBook {
         String picname;
         list=new ArrayList<HashMap<String, String>>();
         try {
-            alldoc = Jsoup.connect("https://www.biqugeu.net/searchbook.php?keyword="+KeyWords).data("query", "Java").userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36").get();
+            alldoc = Jsoup.connect("https://www.uuubqg.cc/searchbook.php?keyword="+KeyWords).data("query", "Java").userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36").get();
             Elements listClass = alldoc.getElementsByAttributeValue("class", "item");
             for(Element listitem:listClass)
             {

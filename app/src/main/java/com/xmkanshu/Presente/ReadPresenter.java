@@ -16,6 +16,7 @@ import com.xmkanshu.Adapter.ChapterAdapter;
 import com.xmkanshu.Cache.BookContentCache;
 import com.xmkanshu.Data.GlobalConfig;
 import com.xmkanshu.Data.ReadConfig;
+import com.xmkanshu.Model.Chapter;
 import com.xmkanshu.R;
 import com.xmkanshu.Reptile.GetAndRead;
 import com.xmkanshu.UI.ReadingActivity;
@@ -195,8 +196,12 @@ public class ReadPresenter implements BasePresente {
         String content = "";
         GlobalConfig.contentMap.clear();
         try {
-//            content = getBook.GetBookContent(GlobalConfig.list.get(GlobalConfig.chapternow).get("link"));
-            content= BookContentCache.getCache(GlobalConfig.list.get(GlobalConfig.chapternow).get("link"));
+// 原错误代码：
+// content= BookContentCache.getCache(GlobalConfig.list.get(GlobalConfig.chapternow).get("link"));
+
+// 修正后（用 Chapter 的 getUrl() 方法，对应你 Chapter 类中的 url 字段）：
+            Chapter currentChapter = GlobalConfig.list.get(GlobalConfig.chapternow);
+            content = BookContentCache.getCache(currentChapter.getUrl()); // 调用 getUrl()
         } catch (IndexOutOfBoundsException e) {
             e.printStackTrace();
 //            Toast.makeText(getApplicationContext(),"章节初始化失败",Toast.LENGTH_SHORT).show();
@@ -205,7 +210,12 @@ public class ReadPresenter implements BasePresente {
         content = getBook.splitcontentSecond(content, ReadConfig.FontSize, GlobalConfig.measuredWidth);//段落分行
         getBook.PageSet(content, GlobalConfig.mPageLineNum, GlobalConfig.contentMap);//章节分页并存入hashmap
         try{
-            readingActivity.tv_title.setText(GlobalConfig.list.get(GlobalConfig.chapternow).get("title"));
+            // 原错误代码：
+            // readingActivity.tv_title.setText(GlobalConfig.list.get(GlobalConfig.chapternow).get("title"));
+
+            // 修正后（用 Chapter 的 getTitle() 方法）：
+            Chapter currentChapter = GlobalConfig.list.get(GlobalConfig.chapternow);
+            readingActivity.tv_title.setText(currentChapter.getTitle()); // 调用 getTitle()
         }catch (Exception e)
         {
             e.printStackTrace();
