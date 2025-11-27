@@ -7,8 +7,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
-        <!--                    第一本书-->
+        <!--                    第一本书，，，用第二种方法，加id-->
         <LinearLayout
+            android:id="@+id/first_book_container"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="80dp"
@@ -63,6 +64,7 @@
         </LinearLayout>
         <!--                    第二本书-->
         <LinearLayout
+            android:id="@+id/second_book_container"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="80dp"

@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.WindowManager;
 
 import com.xmkanshu.Model.Chapter;
@@ -107,26 +108,35 @@ public class GlobalConfig {
         PageTotal=sp.getInt("PageTotal",1);
         chapternow=sp.getInt("chapternow",0);
     }
-    public static String PicLinkCheck(String url)
-    {
-        String url2=url.substring(0,2);
-        String url3="";
-        String regEx="http.*";
-        Pattern pattern= Pattern.compile(regEx);
-        Matcher matcher = pattern.matcher(url);
-        boolean rs = matcher.find();
-        if(url2.equals("//"))
-        {
-            url3="https:"+url;
-            return url3;
-        }else if(rs==true)
-        {
-            return url;
+    // 在 GlobalConfig 类中修改 PicLinkCheck 方法
+    public static String PicLinkCheck(String piclink) {
+        // 添加空值检查
+        if (piclink == null || piclink.isEmpty()) {
+            return "";
         }
-        else
-        {
-            url3="https://www.uuubqg.cc"+url;
-            return url3;
+
+        // 原有的处理逻辑，但需要添加边界检查
+        try {
+            if (piclink.startsWith("//")) {
+                piclink = "https:" + piclink;
+            } else if (piclink.startsWith("/")) {
+                piclink = "https://www.biqugeu.net" + piclink;
+            }
+
+            // 确保后续操作不会出现空字符串
+            if (piclink.isEmpty()) {
+                return "";
+            }
+
+            // 这里可能是导致错误的地方，检查 substring 操作
+            // 如果 piclink 为空或长度不足，就会报错
+            // 比如：if (piclink.substring(0, 2).equals("xx"))
+            // 需要确保字符串长度足够
+
+            return piclink;
+        } catch (Exception e) {
+            Log.e("PicLinkCheck", "处理图片链接出错: " + e.getMessage());
+            return "";
         }
     }
 }

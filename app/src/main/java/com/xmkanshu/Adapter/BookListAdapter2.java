@@ -66,9 +66,9 @@ public class BookListAdapter2 extends BaseAdapter {
         return 0;
     }
 
+    // 在 BookListAdapter2 的 getView 方法中修复索引计算
     @Override
     public View getView(final int position, View convertView, ViewGroup parent) {
-//        int count=position;
         final BookListAdapter2.ViewHolder holder;
         LayoutInflater inflater = activity.getLayoutInflater();
 
@@ -81,61 +81,56 @@ public class BookListAdapter2 extends BaseAdapter {
         } else {
             holder = (BookListAdapter2.ViewHolder) convertView.getTag();
         }
-//        HashMap<String, String> map = list.get(count);
-        //获取缓存的图片
-//        final String picname = list.get(position * 2).get("picname");
-//        final String picname2 = list.get(position * 2 + 1).get("picname");
-        String piclink=list.get(position * 2).get("piclink");
-        piclink= GlobalConfig.PicLinkCheck(piclink);
-        String piclink2 = list.get(position * 2 + 1).get("piclink");
-        piclink2=GlobalConfig.PicLinkCheck(piclink2);
 
+        // 修复索引计算 - 添加边界检查
+        int firstIndex = position * 2;
+        int secondIndex = position * 2 + 1;
 
-        /*
-        *从本地读取图片
-         */
-        /*new Thread(new Runnable() {
-            @Override
-            public void run() {
-                bitmap = BitmapUtils.readBitmapFromFileDescriptor("/data/data/com.tdkankan/temp/images/" + finapicname + ".jpg", 50, 80);
+        // 设置第一个书籍项
+        if (firstIndex < list.size()) {
+            HashMap<String, String> firstBook = list.get(firstIndex);
+            holder.bookItem1.setName(firstBook.get("name"));
+            holder.bookItem1.setAuthor(firstBook.get("author"));
+            holder.bookItem1.setInfo(firstBook.get("info"));
+
+            String piclink = list.get(position * 2).get("piclink");
+            if (piclink != null && !piclink.isEmpty()) {
+                piclink = GlobalConfig.PicLinkCheck(piclink);
+                // 只有URL不为空时才加载图片
+                holder.bookItem1.setPic(piclink, GlobalConfig.bitmapnull);
+            } else {
+                // 使用默认图片
+                holder.bookItem1.setPic("", getBitmapFromRes(activity, R.drawable.nonepic));
             }
-        }).start();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                bitmap2 = BitmapUtils.readBitmapFromFileDescriptor("/data/data/com.tdkankan/temp/images/" + finapicname2 + ".jpg", 50, 80);
-            }
-        }).start();*/
 
-        //从内存读取
-//        bitmap= BookInfoCache.loadImage(picname,piclink);
-//        bitmap2= BookInfoCache.loadImage(picname2,piclink2);
-
-
-        holder.bookItem1.setName(list.get(position * 2).get("name"));
-        holder.bookItem1.setAuthor(list.get(position * 2).get("author"));
-        holder.bookItem1.setInfo(list.get(position * 2).get("info"));
-        holder.bookItem1.setPic(piclink,GlobalConfig.bitmapnull);
-//        holder.img.setText(list.get(count).get("name"));
-//            count++;
-        if (position * 2 + 1 == list.size()) {
-            holder.bookItem2.setVisibility(View.INVISIBLE);
-            holder.bookItem2.setVisibility(View.INVISIBLE);
-            holder.bookItem2.setVisibility(View.INVISIBLE);
-            holder.bookItem2.setVisibility(View.INVISIBLE);
+            holder.bookItem1.setVisibility(View.VISIBLE);
+            holder.bookItem1.setMyItemClickedListener(new MyOnEvenClick(firstIndex));
         } else {
-            holder.bookItem2.setVisibility(View.VISIBLE);
-            holder.bookItem2.setVisibility(View.VISIBLE);
-            holder.bookItem2.setVisibility(View.VISIBLE);
-            holder.bookItem2.setVisibility(View.VISIBLE);
-            holder.bookItem2.setName(list.get(position * 2 + 1).get("name"));
-            holder.bookItem2.setAuthor(list.get(position * 2 + 1).get("author"));
-            holder.bookItem2.setInfo(list.get(position * 2 + 1).get("info"));
-            holder.bookItem2.setPic(piclink2,getBitmapFromRes(activity,R.drawable.nonepic));
+            holder.bookItem1.setVisibility(View.INVISIBLE);
         }
 
-        holder.bookItem1.setMyItemClickedListener(new MyOnEvenClick(position*2));
-        holder.bookItem2.setMyItemClickedListener(new MyOnEvenClick(position*2+1));
+        // 设置第二个书籍项
+        if (secondIndex < list.size()) {
+            HashMap<String, String> secondBook = list.get(secondIndex);
+            holder.bookItem2.setName(secondBook.get("name"));
+            holder.bookItem2.setAuthor(secondBook.get("author"));
+            holder.bookItem2.setInfo(secondBook.get("info"));
+
+            String piclink2 = secondBook.get("piclink");
+            if (piclink2 != null && !piclink2.isEmpty()) {
+                piclink2 = GlobalConfig.PicLinkCheck(piclink2);
+                holder.bookItem2.setPic(piclink2, getBitmapFromRes(activity, R.drawable.nonepic));
+            } else {
+                // 如果没有封面，设置默认图片
+                holder.bookItem2.setPic("", getBitmapFromRes(activity, R.drawable.nonepic));
+            }
+
+            holder.bookItem2.setVisibility(View.VISIBLE);
+            holder.bookItem2.setMyItemClickedListener(new MyOnEvenClick(secondIndex));
+        } else {
+            holder.bookItem2.setVisibility(View.INVISIBLE);
+        }
+
         return convertView;
     }
 

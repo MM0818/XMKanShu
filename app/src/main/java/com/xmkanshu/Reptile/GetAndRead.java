@@ -5,6 +5,8 @@ import android.text.TextPaint;
 import android.util.Log;
 
 import com.xmkanshu.Cache.BookContentCache;
+import com.xmkanshu.Data.BookInfo;
+import com.xmkanshu.Data.BookStoreData;
 import com.xmkanshu.Data.GlobalConfig;
 import com.xmkanshu.Model.Chapter;
 
@@ -16,6 +18,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -440,5 +443,263 @@ public class GetAndRead {
             }
         }
         return returntmp;
+    }
+
+    // 新增方法：获取书城首页数据 - 适配现有BookInfo模型
+    // 在 GetAndRead 类中修改 getBookStoreData 方法
+    public static BookStoreData getBookStoreData(String baseUrl) {
+        BookStoreData bookStoreData = new BookStoreData();
+
+        try {
+            Document doc = Jsoup.connect(baseUrl)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36")
+                    .timeout(10000)
+                    .get();
+
+            // 1. 获取封面推荐（只有这4本书有封面）
+            Elements hotItems = doc.select("div.hot div.l div.item");
+            ArrayList<BookInfo> coverRecommendations = new ArrayList<>();
+            for (Element item : hotItems) {
+                // 获取封面图片
+                Element img = item.selectFirst("img");
+                String coverUrl = img != null ? img.attr("src") : "";
+
+                // 获取书籍链接和标题
+                Element link = item.selectFirst("dl dt a");
+                String title = link != null ? link.text() : "";
+                String bookUrl = link != null ? link.attr("href") : "";
+
+                // 获取作者
+                Element authorSpan = item.selectFirst("dl dt span");
+                String author = authorSpan != null ? authorSpan.text() : "";
+
+                // 获取简介
+                Element desc = item.selectFirst("dl dd");
+                String description = desc != null ? desc.text() : "";
+
+                // 使用你现有的BookInfo构造函数
+                BookInfo book = new BookInfo(
+                        title,          // name
+                        author,         // author
+                        bookUrl,        // link
+                        "",             // picname (可以为空)
+                        coverUrl,       // piclink (只有这4本书有封面)
+                        description,    // info
+                        "",             // lasttime
+                        "",             // newchapter
+                        "",             // newchapterlink
+                        0               // chapternum
+                );
+
+                coverRecommendations.add(book);
+            }
+            bookStoreData.setCoverRecommendations(coverRecommendations);
+
+            // 2. 获取强力推荐（现在会获取封面）
+            Elements strongRecommendations = doc.select("div.hot div.r.bd ul.lis li, div.hot div.r ul.lis li");
+            Log.d("GetBookStore", "强力推荐选择器匹配到的元素数量: " + strongRecommendations.size());
+
+            // 打印HTML结构来调试
+            if (strongRecommendations.isEmpty()) {
+                // 尝试其他可能的选择器
+                strongRecommendations = doc.select("div.hot div.r.bd ul.lis li");
+                Log.d("GetBookStore", "备用选择器1匹配到的元素数量: " + strongRecommendations.size());
+
+                if (strongRecommendations.isEmpty()) {
+                    strongRecommendations = doc.select("div.r ul.lis li");
+                    Log.d("GetBookStore", "备用选择器2匹配到的元素数量: " + strongRecommendations.size());
+                }
+
+                if (strongRecommendations.isEmpty()) {
+                    strongRecommendations = doc.select("ul.lis li");
+                    Log.d("GetBookStore", "备用选择器3匹配到的元素数量: " + strongRecommendations.size());
+                }
+
+                // 打印整个hot区域的HTML来调试
+                Element hotDiv = doc.selectFirst("div.hot");
+                if (hotDiv != null) {
+                    Log.d("GetBookStore", "hot区域HTML: " + hotDiv.html().substring(0, Math.min(500, hotDiv.html().length())));
+                }
+            }
+
+            ArrayList<BookInfo> strongRecs = new ArrayList<>();
+            for (Element item : strongRecommendations) {
+                // 获取标题和链接
+                Element link = item.selectFirst("a");
+                String title = link != null ? link.text() : "";
+                String bookUrl = link != null ? link.attr("href") : "";
+
+                // 获取分类
+                Element category = item.selectFirst("span.s1");
+                String categoryText = category != null ? category.text() : "";
+
+                Log.d("GetBookStore", "强力推荐书籍: " + title + ", 链接: " + bookUrl + ", 分类: " + categoryText);
+
+                // 为强力推荐的书籍获取封面
+                String coverUrl = "";
+                if (bookUrl != null && !bookUrl.isEmpty()) {
+                    coverUrl = getBookCoverFromDetailPage(bookUrl);
+                }
+
+                BookInfo book = new BookInfo(
+                        title,          // name
+                        "",             // author
+                        bookUrl,        // link
+                        "",             // picname
+                        coverUrl,       // piclink (现在有封面了)
+                        categoryText,   // info
+                        "",             // lasttime
+                        "",             // newchapter
+                        "",             // newchapterlink
+                        0               // chapternum
+                );
+
+                strongRecs.add(book);
+            }
+            bookStoreData.setStrongRecommendations(strongRecs);
+            Log.d("GetBookStore", "最终强力推荐书籍数量: " + strongRecs.size());
+
+            // 3. 获取最近更新（现在会获取封面）
+            Elements recentUpdates = doc.select("div.up div.l ul li");
+            ArrayList<BookInfo> recentUpdateList = new ArrayList<>();
+            for (Element item : recentUpdates) {
+                // 书名和链接
+                Element titleLink = item.selectFirst("span.s2 a");
+                String title = titleLink != null ? titleLink.text() : "";
+                String bookUrl = titleLink != null ? titleLink.attr("href") : "";
+
+                // 最新章节
+                Element chapterLink = item.selectFirst("span.s3 a");
+                String latestChapter = chapterLink != null ? chapterLink.text() : "";
+                String latestChapterUrl = chapterLink != null ? chapterLink.attr("href") : "";
+
+                // 作者
+                Element author = item.selectFirst("span.s4");
+                String authorName = author != null ? author.text() : "";
+
+                // 更新时间
+                Element updateTime = item.selectFirst("span.s5");
+                String updateTimeStr = updateTime != null ? updateTime.text() : "";
+
+                // 分类
+                Element category = item.selectFirst("span.s1");
+                String categoryText = category != null ? category.text() : "";
+
+                // 为最近更新的书籍获取封面
+                String coverUrl = "";
+                if (bookUrl != null && !bookUrl.isEmpty()) {
+                    coverUrl = getBookCoverFromDetailPage(bookUrl);
+                }
+
+                BookInfo book = new BookInfo(
+                        title,              // name
+                        authorName,         // author
+                        bookUrl,            // link
+                        "",                 // picname
+                        coverUrl,           // piclink (现在有封面了)
+                        categoryText,       // info (这里用分类作为简介)
+                        updateTimeStr,      // lasttime
+                        latestChapter,      // newchapter
+                        latestChapterUrl,   // newchapterlink
+                        0                   // chapternum
+                );
+
+                recentUpdateList.add(book);
+            }
+            bookStoreData.setRecentUpdates(recentUpdateList);
+
+// 4. 获取最新入库（现在会获取封面）
+            Elements newBooks = doc.select("div.up div.r ul li");
+            ArrayList<BookInfo> newBookList = new ArrayList<>();
+            for (Element item : newBooks) {
+                // 书名和链接
+                Element titleLink = item.selectFirst("span.s2 a");
+                String title = titleLink != null ? titleLink.text() : "";
+                String bookUrl = titleLink != null ? titleLink.attr("href") : "";
+
+                // 入库时间
+                Element addTime = item.selectFirst("span.s5");
+                String addTimeStr = addTime != null ? addTime.text() : "";
+
+                // 分类
+                Element category = item.selectFirst("span.s1");
+                String categoryText = category != null ? category.text() : "";
+
+                // 为最新入库的书籍获取封面
+                String coverUrl = "";
+                if (bookUrl != null && !bookUrl.isEmpty()) {
+                    coverUrl = getBookCoverFromDetailPage(bookUrl);
+                }
+
+                BookInfo book = new BookInfo(
+                        title,              // name
+                        "",                 // author
+                        bookUrl,            // link
+                        "",                 // picname
+                        coverUrl,           // piclink (现在有封面了)
+                        categoryText,       // info (这里用分类作为简介)
+                        addTimeStr,         // lasttime (用入库时间)
+                        "",                 // newchapter
+                        "",                 // newchapterlink
+                        0                   // chapternum
+                );
+
+                newBookList.add(book);
+            }
+            bookStoreData.setNewBooks(newBookList);
+
+            Log.d("GetBookStore", "成功获取书城数据: " +
+                    "封面推荐=" + coverRecommendations.size() + ", " +
+                    "强力推荐=" + strongRecs.size() + ", " +
+                    "最近更新=" + recentUpdateList.size() + ", " +
+                    "最新入库=" + newBookList.size());
+
+        } catch (Exception e) {
+            Log.e("GetBookStore", "获取书城数据失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return bookStoreData;
+    }
+
+    // 在 GetAndRead 类中添加这个方法
+    public static String getBookCoverFromDetailPage(String bookUrl) {
+        if (bookUrl == null || bookUrl.isEmpty()) {
+            return "";
+        }
+
+        try {
+            // 确保URL是完整的
+            String fullUrl;
+            if (bookUrl.startsWith("http")) {
+                fullUrl = bookUrl;
+            } else {
+                fullUrl = "https://www.biqugeu.net" + bookUrl;
+            }
+
+            Document doc = Jsoup.connect(fullUrl)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36")
+                    .timeout(10000)
+                    .get();
+
+            // 从详情页获取封面图片
+            Element coverImg = doc.selectFirst("div#sidebar img");
+            if (coverImg != null) {
+                String coverUrl = coverImg.attr("src");
+                if (coverUrl != null && !coverUrl.isEmpty()) {
+                    // 处理相对路径
+                    if (coverUrl.startsWith("//")) {
+                        coverUrl = "https:" + coverUrl;
+                    } else if (coverUrl.startsWith("/")) {
+                        coverUrl = "https://www.biqugeu.net" + coverUrl;
+                    }
+                    return coverUrl;
+                }
+            }
+        } catch (Exception e) {
+            Log.e("GetBookCover", "获取书籍封面失败: " + e.getMessage());
+        }
+
+        return "";
     }
 }
