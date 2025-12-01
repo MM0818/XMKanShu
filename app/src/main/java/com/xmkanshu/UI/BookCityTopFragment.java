@@ -213,6 +213,27 @@ public class BookCityTopFragment extends Fragment {
     }
 
     private void initDataSources() {
+//        list = new ArrayList<>();
+//        list2 = new ArrayList<>();
+//        newBooksList = new ArrayList<>();
+//        recentUpdateList = new ArrayList<>();
+//
+//        // 初始化适配器
+//        fengTuiAdapter = new FengTuiAdapter(list, getActivity());
+//        qiangTuiAdapter = new BookListAdapter2(list2, getActivity());
+//        newBooksAdapter = new BookListAdapter2(newBooksList, getActivity());
+//        recentUpdateAdapter = new BookListAdapter2(recentUpdateList, getActivity());
+//
+//        // 设置适配器
+//        listView.setAdapter(fengTuiAdapter);
+//        listView2.setAdapter(qiangTuiAdapter);
+//        if (listViewNewBooks != null) {
+//            listViewNewBooks.setAdapter(newBooksAdapter);
+//        }
+//        if (listViewRecentUpdate != null) {
+//            listViewRecentUpdate.setAdapter(recentUpdateAdapter);
+//        }
+
         list = new ArrayList<>();
         list2 = new ArrayList<>();
         newBooksList = new ArrayList<>();
@@ -224,6 +245,22 @@ public class BookCityTopFragment extends Fragment {
         newBooksAdapter = new BookListAdapter2(newBooksList, getActivity());
         recentUpdateAdapter = new BookListAdapter2(recentUpdateList, getActivity());
 
+        // 设置封面推荐的点击监听 - 添加详细日志
+        fengTuiAdapter.setOnBookItemClickListener(new FengTuiAdapter.OnBookItemClickListener() {
+            @Override
+            public void onBookItemClick(int position) {
+                Log.d("BookCityTop", "封面推荐点击事件触发，位置: " + position);
+                // 检查位置是否有效
+                if (position >= 0 && position < list.size()) {
+                    HashMap<String, String> book = list.get(position);
+                    Log.d("BookCityTop", "点击的书籍: " + book.get("name") + ", 链接: " + book.get("link"));
+                    openBookReading(book);
+                } else {
+                    Log.e("BookCityTop", "无效的位置: " + position + ", 列表大小: " + list.size());
+                }
+            }
+        });
+
         // 设置适配器
         listView.setAdapter(fengTuiAdapter);
         listView2.setAdapter(qiangTuiAdapter);
@@ -234,17 +271,51 @@ public class BookCityTopFragment extends Fragment {
             listViewRecentUpdate.setAdapter(recentUpdateAdapter);
         }
 
+    }
 
+    // 在 BookCityTopFragment 类中添加这个方法
+    private void openBookReading(HashMap<String, String> book) {
+        if (book != null && book.get("link") != null) {
+            String bookLink = book.get("link");
+            String bookName = book.get("name");
+            String author = book.get("author");
+            String info = book.get("info");
+            String piclink = book.get("piclink");
+            String picname = book.get("picname");
 
+            Log.d("BookCityTop", "准备打开书籍详情页: " + bookName + ", 链接: " + bookLink);
+
+            // 跳转到书籍详情页（和 BookListAdapter2 保持一致）
+            Intent intent = new Intent(getActivity(), BookInfoDetailActivity.class);
+            intent.putExtra("name", bookName);
+            intent.putExtra("author", author != null ? author : "");
+            intent.putExtra("info", info != null ? info : "");
+            intent.putExtra("picname", picname != null ? picname : "");
+            intent.putExtra("link", bookLink);
+            intent.putExtra("piclink", piclink != null ? piclink : "");
+            startActivity(intent);
+        } else {
+            Log.e("BookCityTop", "书籍数据为空或链接无效");
+        }
     }
 
     // 将BookInfo转换为HashMap格式
+    // 在 convertBookInfoToMap 方法中生成 picname
     private HashMap<String, String> convertBookInfoToMap(BookInfo book) {
         HashMap<String, String> map = new HashMap<>();
         map.put("name", book.getName() != null ? book.getName() : "");
         map.put("author", book.getAuthor() != null ? book.getAuthor() : "");
         map.put("link", book.getLink() != null ? book.getLink() : "");
-        map.put("picname", book.getPicname() != null ? book.getPicname() : "");
+
+        // 生成 picname：从链接中提取ID
+        String link = book.getLink() != null ? book.getLink() : "";
+        String picname = "";
+        if (!link.isEmpty()) {
+            // 从 "/3_3806/" 中提取 "3_3806"
+            picname = link.replace("/", "").replace("_", "");
+        }
+        map.put("picname", picname);
+
         map.put("piclink", book.getPiclink() != null ? book.getPiclink() : "");
         map.put("info", book.getInfo() != null ? book.getInfo() : "");
         map.put("lasttime", book.getLasttime() != null ? book.getLasttime() : "");
