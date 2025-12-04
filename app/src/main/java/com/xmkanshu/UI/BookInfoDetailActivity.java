@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -111,36 +112,120 @@ public class BookInfoDetailActivity extends AppCompatActivity {
         });
     }
 
-    private  void GetData()
-    {
+    // 修改 GetData 方法，优先使用传递的数据
+    // 修改 GetData 方法，添加日志
+    private void GetData() {
         Intent intent = getIntent();
+
+        // 记录所有传递过来的数据
+        Log.d("BookInfoDetail", "=== 从书城页面接收的数据 ===");
+        Log.d("BookInfoDetail", "书名: " + intent.getStringExtra("name"));
+        Log.d("BookInfoDetail", "作者: " + intent.getStringExtra("author"));
+        Log.d("BookInfoDetail", "简介: " + (intent.getStringExtra("info") != null ?
+                intent.getStringExtra("info").substring(0, Math.min(30, intent.getStringExtra("info").length())) + "..." : "null"));
+        Log.d("BookInfoDetail", "链接: " + intent.getStringExtra("link"));
+        Log.d("BookInfoDetail", "图片链接: " + intent.getStringExtra("piclink"));
+        Log.d("BookInfoDetail", "最后更新: " + intent.getStringExtra("lasttime"));
+        Log.d("BookInfoDetail", "最新章节: " + intent.getStringExtra("newchapter"));
+        Log.d("BookInfoDetail", "章节数: " + intent.getStringExtra("chapternum"));
+        Log.d("BookInfoDetail", "==========================");
+
         title = intent.getStringExtra("name");
         info = intent.getStringExtra("info");
         link = intent.getStringExtra("link");
         author = intent.getStringExtra("author");
         picname = intent.getStringExtra("picname");
         piclink = intent.getStringExtra("piclink");
+        lasttime = intent.getStringExtra("lasttime");      // 新增
+        newchapter = intent.getStringExtra("newchapter");  // 新增
+        String chapternumStr = intent.getStringExtra("chapternum"); // 新增
+
         piclink = GlobalConfig.PicLinkCheck(piclink);
-        preInitBookInfo(picname);
-        newchapter = bookInfo.getNewchapter();
-        lasttime = bookInfo.getLasttime();
-        chapternum=bookInfo.getChapternum();
-        if(mDb.search(link)!=null)
-        {
+
+        // 记录处理后的数据
+        Log.d("BookInfoDetail", "=== 处理后数据 ===");
+        Log.d("BookInfoDetail", "作者: " + (author != null ? author : "null"));
+        Log.d("BookInfoDetail", "最后更新: " + (lasttime != null ? lasttime : "null"));
+        Log.d("BookInfoDetail", "最新章节: " + (newchapter != null ? newchapter : "null"));
+        Log.d("BookInfoDetail", "==========================");
+
+        // 如果传递的数据中有章节数，使用它
+        if (chapternumStr != null && !chapternumStr.isEmpty()) {
+            try {
+                chapternum = Integer.parseInt(chapternumStr);
+                Log.d("BookInfoDetail", "从intent获取章节数: " + chapternum);
+            } catch (NumberFormatException e) {
+                chapternum = 0;
+                Log.e("BookInfoDetail", "章节数转换失败: " + chapternumStr);
+            }
+        } else {
+            // 否则尝试从缓存获取
+            Log.d("BookInfoDetail", "从缓存获取补充信息");
+            preInitBookInfo(picname);
+            if (bookInfo != null) {
+                chapternum = bookInfo.getChapternum();
+                Log.d("BookInfoDetail", "从缓存获取章节数: " + chapternum);
+
+                // 如果传递的数据缺少某些信息，尝试用缓存补充
+                if ((author == null || author.isEmpty()) && bookInfo.getAuthor() != null) {
+                    author = bookInfo.getAuthor();
+                    Log.d("BookInfoDetail", "从缓存补充作者: " + author);
+                }
+                if ((lasttime == null || lasttime.isEmpty()) && bookInfo.getLasttime() != null) {
+                    lasttime = bookInfo.getLasttime();
+                    Log.d("BookInfoDetail", "从缓存补充最后更新: " + lasttime);
+                }
+                if ((newchapter == null || newchapter.isEmpty()) && bookInfo.getNewchapter() != null) {
+                    newchapter = bookInfo.getNewchapter();
+                    Log.d("BookInfoDetail", "从缓存补充最新章节: " + newchapter);
+                }
+            } else {
+                Log.d("BookInfoDetail", "缓存中没有找到书籍信息");
+            }
+        }
+
+        // 检查书架状态
+        if (mDb.search(link) != null) {
             btn_add.setText("移出书架");
+            Log.d("BookInfoDetail", "书籍已在书架中");
         }
     }
-    private void initView() {
 
-//        Bitmap bitmap= BookInfoCache.loadImage(picname,piclink);
+    private void initView() {
+        Log.d("BookInfoDetail", "=== 初始化UI数据 ===");
+        Log.d("BookInfoDetail", "设置标题: " + title);
+        Log.d("BookInfoDetail", "设置作者: " + (author != null ? author : "null"));
+        Log.d("BookInfoDetail", "设置最后更新: " + (lasttime != null ? lasttime : "null"));
+        Log.d("BookInfoDetail", "设置最新章节: " + (newchapter != null ? newchapter : "null"));
+        Log.d("BookInfoDetail", "==========================");
 
         tv_title.setText(title);
         tv_name.setText(title);
         tv_info.setText(info);
-        tv_author.setText(author);
-//        img_pic.setImageBitmap(bitmap);
-        tv_lasttime.setText(lasttime);
-        tv_newchapter.setText(newchapter);
+
+        // 检查作者TextView是否存在
+        if (tv_author != null) {
+            tv_author.setText(author != null ? author : "未知作者");
+            Log.d("BookInfoDetail", "作者TextView设置完成");
+        } else {
+            Log.e("BookInfoDetail", "作者TextView为空！");
+        }
+
+        // 检查最后更新TextView是否存在
+        if (tv_lasttime != null) {
+            tv_lasttime.setText(lasttime != null ? lasttime : "未知");
+            Log.d("BookInfoDetail", "最后更新TextView设置完成");
+        } else {
+            Log.e("BookInfoDetail", "最后更新TextView为空！");
+        }
+
+        // 检查最新章节TextView是否存在
+        if (tv_newchapter != null) {
+            tv_newchapter.setText(newchapter != null ? newchapter : "未知");
+            Log.d("BookInfoDetail", "最新章节TextView设置完成");
+        } else {
+            Log.e("BookInfoDetail", "最新章节TextView为空！");
+        }
     }
 
     private void findId() {
@@ -161,8 +246,45 @@ public class BookInfoDetailActivity extends AppCompatActivity {
     }
 
     private void preInitBookInfo(String url) {
-        bookInfo = BookInfoCache.loadBook(url);
+        Log.d("BookInfoDetail", "preInitBookInfo - 原始URL: " + url);
+
+        String bookId = url;
+
+        // 情况1：如果url是类似"137137159"的纯数字
+        if (url != null && url.matches("\\d+") && url.length() > 5) {
+            // 不自动转换，因为这样容易出错
+            // 直接使用原始的链接来获取
+            bookId = url;
+            Log.d("BookInfoDetail", "纯数字ID，不转换: " + bookId);
+        }
+        // 情况2：如果url是链接的一部分，如"/137_137159/"
+        else if (url != null && url.contains("/")) {
+            // 从链接中提取ID，如从"/137_137159/"提取"137_137159"
+            String[] parts = url.split("/");
+            for (String part : parts) {
+                if (part.contains("_")) {
+                    bookId = part;
+                    break;
+                }
+            }
+            Log.d("BookInfoDetail", "从链接提取ID: " + url + " -> " + bookId);
+        }
+
+        Log.d("BookInfoDetail", "最终使用的书籍ID: " + bookId);
+
+        bookInfo = BookInfoCache.loadBook(bookId);
+        if (bookInfo != null) {
+            Log.d("BookInfoDetail", "从缓存获取到书籍信息:");
+            Log.d("BookInfoDetail", "  作者: " + (bookInfo.getAuthor() != null ? bookInfo.getAuthor() : "空"));
+            Log.d("BookInfoDetail", "  最后更新: " + (bookInfo.getLasttime() != null ? bookInfo.getLasttime() : "空"));
+            Log.d("BookInfoDetail", "  最新章节: " + (bookInfo.getNewchapter() != null ? bookInfo.getNewchapter() : "空"));
+            Log.d("BookInfoDetail", "  章节数: " + bookInfo.getChapternum());
+        } else {
+            Log.d("BookInfoDetail", "缓存中没有找到书籍信息");
+        }
     }
+
+
     private class GetDataTask extends AsyncTask<Void,Integer,Boolean>
     {
         @Override

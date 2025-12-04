@@ -55,15 +55,19 @@ public class BookInfoCache extends HashMap {
     }
 
     public static BookInfo loadBook(String id) {
+        Log.d("BookCache", "尝试加载书籍缓存，ID: " + id);
+
         if (GlobalConfig.bookmap.containsKey(id)) {
             BookInfo book = GlobalConfig.bookmap.get(id);
-            Log.d("bookCacheGet", "图书缓存已存在:" + id);
+            Log.d("BookCache", "图书缓存已存在:" + id);
+            Log.d("BookCache", "缓存中的作者: " + (book.getAuthor() != null ? book.getAuthor() : "空"));
+            Log.d("BookCache", "缓存中的最后更新: " + (book.getLasttime() != null ? book.getLasttime() : "空"));
+            Log.d("BookCache", "缓存中的最新章节: " + (book.getNewchapter() != null ? book.getNewchapter() : "空"));
             return book;
         } else {
-            Log.d("bookCacheGet", "图书缓存不存在:" + id);
-            BookInfo book2 = GetBook.GetBookInfo(id);//爬虫爬取书本信息
-//            BookInfo book2 = new BookInfo(id, bookInfo);
-            GlobalConfig.bookmap.put(id, book2);//书本信息存入hashmap缓存
+            Log.d("BookCache", "图书缓存不存在:" + id);
+            BookInfo book2 = GetBook.GetBookInfo(id);
+            GlobalConfig.bookmap.put(id, book2);
             return book2;
         }
     }

@@ -280,12 +280,25 @@ public class BookCityTopFragment extends Fragment {
             String bookName = book.get("name");
             String author = book.get("author");
             String info = book.get("info");
-            String piclink = book.get("piclink");
             String picname = book.get("picname");
+            String piclink = book.get("piclink");
+            String lasttime = book.get("lasttime");
+            String newchapter = book.get("newchapter");
+            String chapternum = book.get("chapternum");
 
-            Log.d("BookCityTop", "准备打开书籍详情页: " + bookName + ", 链接: " + bookLink);
+            // 详细日志：检查传递的所有数据
+            Log.d("BookCityTop", "=== 书籍详情页跳转数据 ===");
+            Log.d("BookCityTop", "书名: " + bookName);
+            Log.d("BookCityTop", "作者: " + (author != null ? author : "null"));
+            Log.d("BookCityTop", "最后更新: " + (lasttime != null ? lasttime : "null"));
+            Log.d("BookCityTop", "最新章节: " + (newchapter != null ? newchapter : "null"));
+            Log.d("BookCityTop", "章节数: " + (chapternum != null ? chapternum : "null"));
+            Log.d("BookCityTop", "图片链接: " + (piclink != null ? piclink : "null"));
+            Log.d("BookCityTop", "简介: " + (info != null ? info.substring(0, Math.min(30, info.length())) + "..." : "null"));
+            Log.d("BookCityTop", "链接: " + bookLink);
+            Log.d("BookCityTop", "==========================");
 
-            // 跳转到书籍详情页（和 BookListAdapter2 保持一致）
+            // 跳转到书籍详情页
             Intent intent = new Intent(getActivity(), BookInfoDetailActivity.class);
             intent.putExtra("name", bookName);
             intent.putExtra("author", author != null ? author : "");
@@ -293,6 +306,9 @@ public class BookCityTopFragment extends Fragment {
             intent.putExtra("picname", picname != null ? picname : "");
             intent.putExtra("link", bookLink);
             intent.putExtra("piclink", piclink != null ? piclink : "");
+            intent.putExtra("lasttime", lasttime != null ? lasttime : "");
+            intent.putExtra("newchapter", newchapter != null ? newchapter : "");
+            intent.putExtra("chapternum", chapternum != null ? chapternum : "0");
             startActivity(intent);
         } else {
             Log.e("BookCityTop", "书籍数据为空或链接无效");
@@ -307,12 +323,23 @@ public class BookCityTopFragment extends Fragment {
         map.put("author", book.getAuthor() != null ? book.getAuthor() : "");
         map.put("link", book.getLink() != null ? book.getLink() : "");
 
-        // 生成 picname：从链接中提取ID
+        // 关键修复：picname应该保持原始格式，不要去掉下划线！
         String link = book.getLink() != null ? book.getLink() : "";
         String picname = "";
         if (!link.isEmpty()) {
-            // 从 "/3_3806/" 中提取 "3_3806"
-            picname = link.replace("/", "").replace("_", "");
+            // 从 "/137_137159/" 中提取 "137_137159"
+            // 不要去掉下划线！
+            String[] parts = link.split("/");
+            for (String part : parts) {
+                if (part.contains("_")) {
+                    picname = part;  // 保持 "137_137159" 格式
+                    break;
+                }
+            }
+            // 如果没找到带下划线的部分，再尝试其他方法
+            if (picname.isEmpty()) {
+                picname = link.replace("/", "").replace("_", "");
+            }
         }
         map.put("picname", picname);
 
@@ -322,6 +349,9 @@ public class BookCityTopFragment extends Fragment {
         map.put("newchapter", book.getNewchapter() != null ? book.getNewchapter() : "");
         map.put("newchapterlink", book.getNewchapterlink() != null ? book.getNewchapterlink() : "");
         map.put("chapternum", String.valueOf(book.getChapternum()));
+
+        Log.d("BookCityTop", "convertBookInfoToMap - picname: " + picname + ", link: " + link);
+
         return map;
     }
 
@@ -364,6 +394,7 @@ public class BookCityTopFragment extends Fragment {
     }
 
     // 更新封面推荐
+    // 在 updateCoverRecommendations 方法中修改：
     private void updateCoverRecommendations(List<BookInfo> books) {
         if (books == null || books.isEmpty()) {
             Log.d("BookCityTop", "封面推荐数据为空");
@@ -371,11 +402,22 @@ public class BookCityTopFragment extends Fragment {
         }
 
         Log.d("BookCityTop", "封面推荐数量: " + books.size());
-        list.clear();  // 使用 list 而不是 fengTuiList
+        list.clear();
 
-        for (BookInfo book : books) {
+        for (int i = 0; i < books.size(); i++) {
+            BookInfo book = books.get(i);
+
+            // 详细检查BookInfo对象的数据
+            Log.d("BookCityTop", "封面推荐[" + i + "] - BookInfo对象:");
+            Log.d("BookCityTop", "  name: " + book.getName());
+            Log.d("BookCityTop", "  author: " + book.getAuthor());
+            Log.d("BookCityTop", "  lasttime: " + book.getLasttime());
+            Log.d("BookCityTop", "  newchapter: " + book.getNewchapter());
+            Log.d("BookCityTop", "  chapternum: " + book.getChapternum());
+            Log.d("BookCityTop", "  link: " + book.getLink());
+
             HashMap<String, String> map = convertBookInfoToMap(book);
-            list.add(map);  // 使用 list 而不是 fengTuiList
+            list.add(map);
         }
 
         fengTuiAdapter.notifyDataSetChanged();
