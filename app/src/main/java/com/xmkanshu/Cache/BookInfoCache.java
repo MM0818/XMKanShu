@@ -60,12 +60,10 @@ public class BookInfoCache extends HashMap {
         if (GlobalConfig.bookmap.containsKey(id)) {
             BookInfo book = GlobalConfig.bookmap.get(id);
             Log.d("BookCache", "图书缓存已存在:" + id);
-            Log.d("BookCache", "缓存中的作者: " + (book.getAuthor() != null ? book.getAuthor() : "空"));
-            Log.d("BookCache", "缓存中的最后更新: " + (book.getLasttime() != null ? book.getLasttime() : "空"));
-            Log.d("BookCache", "缓存中的最新章节: " + (book.getNewchapter() != null ? book.getNewchapter() : "空"));
             return book;
         } else {
             Log.d("BookCache", "图书缓存不存在:" + id);
+            // 调用修正后的GetBookInfo方法（参数为id）
             BookInfo book2 = GetBook.GetBookInfo(id);
             GlobalConfig.bookmap.put(id, book2);
             return book2;

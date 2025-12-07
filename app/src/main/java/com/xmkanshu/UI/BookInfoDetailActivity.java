@@ -21,8 +21,13 @@ import com.xmkanshu.Cache.ImageCacheManager;
 import com.xmkanshu.Data.BookInfo;
 import com.xmkanshu.Data.GlobalConfig;
 import com.xmkanshu.R;
+import com.xmkanshu.Reptile.GetBook;
 import com.xmkanshu.greendao.DaoHelper;
 import com.xmkanshu.greendao.model.Bookinfodb;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.CenterCrop;
+import com.bumptech.glide.request.RequestOptions;
 
 /**
  * @author ZQZESS
@@ -116,79 +121,94 @@ public class BookInfoDetailActivity extends AppCompatActivity {
     // 修改 GetData 方法，添加日志
     private void GetData() {
         Intent intent = getIntent();
-
-        // 记录所有传递过来的数据
         Log.d("BookInfoDetail", "=== 从书城页面接收的数据 ===");
-        Log.d("BookInfoDetail", "书名: " + intent.getStringExtra("name"));
-        Log.d("BookInfoDetail", "作者: " + intent.getStringExtra("author"));
-        Log.d("BookInfoDetail", "简介: " + (intent.getStringExtra("info") != null ?
-                intent.getStringExtra("info").substring(0, Math.min(30, intent.getStringExtra("info").length())) + "..." : "null"));
-        Log.d("BookInfoDetail", "链接: " + intent.getStringExtra("link"));
-        Log.d("BookInfoDetail", "图片链接: " + intent.getStringExtra("piclink"));
-        Log.d("BookInfoDetail", "最后更新: " + intent.getStringExtra("lasttime"));
-        Log.d("BookInfoDetail", "最新章节: " + intent.getStringExtra("newchapter"));
-        Log.d("BookInfoDetail", "章节数: " + intent.getStringExtra("chapternum"));
+        // 逐个打印，避免空指针
+        Log.d("BookInfoDetail", "书名: " + safeLog(intent.getStringExtra("name")));
+        Log.d("BookInfoDetail", "作者: " + safeLog(intent.getStringExtra("author")));
+        Log.d("BookInfoDetail", "最后更新: " + safeLog(intent.getStringExtra("lasttime")));
+        Log.d("BookInfoDetail", "最新章节: " + safeLog(intent.getStringExtra("newchapter")));
         Log.d("BookInfoDetail", "==========================");
 
-        title = intent.getStringExtra("name");
-        info = intent.getStringExtra("info");
-        link = intent.getStringExtra("link");
-        author = intent.getStringExtra("author");
-        picname = intent.getStringExtra("picname");
-        piclink = intent.getStringExtra("piclink");
-        lasttime = intent.getStringExtra("lasttime");      // 新增
-        newchapter = intent.getStringExtra("newchapter");  // 新增
-        String chapternumStr = intent.getStringExtra("chapternum"); // 新增
+        // 赋值时用空字符串兜底
+        title = safeGet(intent, "name");
+        info = safeGet(intent, "info");
+        link = safeGet(intent, "link");
+        author = safeGet(intent, "author");
+        picname = safeGet(intent, "picname");
+        piclink = safeGet(intent, "piclink");
+        lasttime = safeGet(intent, "lasttime");
+        newchapter = safeGet(intent, "newchapter");
+        String chapternumStr = safeGet(intent, "chapternum");
 
-        piclink = GlobalConfig.PicLinkCheck(piclink);
+        // 处理piclink的补全
+        if (!piclink.isEmpty() && piclink.startsWith("/")) {
+            piclink = "https://www.uuubqg.cc" + piclink;
+        }
 
-        // 记录处理后的数据
-        Log.d("BookInfoDetail", "=== 处理后数据 ===");
-        Log.d("BookInfoDetail", "作者: " + (author != null ? author : "null"));
-        Log.d("BookInfoDetail", "最后更新: " + (lasttime != null ? lasttime : "null"));
-        Log.d("BookInfoDetail", "最新章节: " + (newchapter != null ? newchapter : "null"));
-        Log.d("BookInfoDetail", "==========================");
+        // 处理章节数
+        try {
+            chapternum = Integer.parseInt(chapternumStr);
+        } catch (Exception e) {
+            chapternum = 0;
+        }
 
-        // 如果传递的数据中有章节数，使用它
-        if (chapternumStr != null && !chapternumStr.isEmpty()) {
-            try {
-                chapternum = Integer.parseInt(chapternumStr);
-                Log.d("BookInfoDetail", "从intent获取章节数: " + chapternum);
-            } catch (NumberFormatException e) {
-                chapternum = 0;
-                Log.e("BookInfoDetail", "章节数转换失败: " + chapternumStr);
-            }
+        // 数据补充逻辑：只有当数据为空时才从缓存/网络获取
+        boolean needRefresh = lasttime.isEmpty() || newchapter.isEmpty();
+        Log.d("BookInfoDetail", "是否需要刷新数据: " + needRefresh);
+        if (needRefresh) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        // 清洗link得到id
+                        String cleanId = link.replaceAll("https?://[^/]+", "").replaceAll("/+", "_").replaceAll("^_+", "").replaceAll("_+$", "");
+                        Log.d("BookInfoDetail", "清洗后的ID: " + cleanId);
+                        if (!cleanId.isEmpty()) {
+                            BookInfo freshInfo = GetBook.GetBookInfo(cleanId);
+                            if (freshInfo != null) {
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        // 只补充为空的字段
+                                        if (lasttime.isEmpty()) lasttime = safeGet(freshInfo.getLasttime());
+                                        if (newchapter.isEmpty()) newchapter = safeGet(freshInfo.getNewchapter());
+                                        if (author.isEmpty()) author = safeGet(freshInfo.getAuthor());
+                                        if (title.isEmpty()) title = safeGet(freshInfo.getName());
+                                        Log.d("BookInfoDetail", "从网络补充数据后: ");
+                                        Log.d("BookInfoDetail", "最后更新: " + lasttime);
+                                        Log.d("BookInfoDetail", "最新章节: " + newchapter);
+                                        initView(); // 重新初始化UI
+                                    }
+                                });
+                            } else {
+                                Log.w("BookInfoDetail", "网络获取书籍信息返回null");
+                            }
+                        } else {
+                            Log.w("BookInfoDetail", "清洗后的ID为空，无法获取数据");
+                        }
+                    } catch (Exception e) {
+                        Log.e("BookInfoDetail", "补充数据失败: " + e.getMessage(), e);
+                    }
+                }
+            }).start();
         } else {
-            // 否则尝试从缓存获取
-            Log.d("BookInfoDetail", "从缓存获取补充信息");
-            preInitBookInfo(picname);
-            if (bookInfo != null) {
-                chapternum = bookInfo.getChapternum();
-                Log.d("BookInfoDetail", "从缓存获取章节数: " + chapternum);
-
-                // 如果传递的数据缺少某些信息，尝试用缓存补充
-                if ((author == null || author.isEmpty()) && bookInfo.getAuthor() != null) {
-                    author = bookInfo.getAuthor();
-                    Log.d("BookInfoDetail", "从缓存补充作者: " + author);
-                }
-                if ((lasttime == null || lasttime.isEmpty()) && bookInfo.getLasttime() != null) {
-                    lasttime = bookInfo.getLasttime();
-                    Log.d("BookInfoDetail", "从缓存补充最后更新: " + lasttime);
-                }
-                if ((newchapter == null || newchapter.isEmpty()) && bookInfo.getNewchapter() != null) {
-                    newchapter = bookInfo.getNewchapter();
-                    Log.d("BookInfoDetail", "从缓存补充最新章节: " + newchapter);
-                }
-            } else {
-                Log.d("BookInfoDetail", "缓存中没有找到书籍信息");
-            }
+            Log.d("BookInfoDetail", "数据完整，无需刷新");
         }
+    }
 
-        // 检查书架状态
-        if (mDb.search(link) != null) {
-            btn_add.setText("移出书架");
-            Log.d("BookInfoDetail", "书籍已在书架中");
-        }
+    // 辅助方法：安全获取Intent参数（避免空指针）
+    private String safeGet(Intent intent, String key) {
+        return intent.getStringExtra(key) == null ? "" : intent.getStringExtra(key).trim();
+    }
+
+    // 辅助方法：安全获取对象属性（避免空指针）
+    private String safeGet(String str) {
+        return str == null ? "" : str.trim();
+    }
+
+    // 辅助方法：安全打印日志（避免空指针）
+    private String safeLog(String str) {
+        return str == null ? "null" : str;
     }
 
     private void initView() {
@@ -307,7 +327,15 @@ public class BookInfoDetailActivity extends AppCompatActivity {
             super.onPostExecute(aBoolean);
             loadingDialog.dismiss();
             initView();
-            ImageCacheManager.loadImage(piclink, img_pic, getBitmapFromRes(R.drawable.nonepic), getBitmapFromRes(R.drawable.nonepic));
+            // 加载封面图片
+            RequestOptions options = new RequestOptions()
+                    .placeholder(R.drawable.nonepic)
+                    .error(R.drawable.nonepic)
+                    .centerCrop();
+            Glide.with(BookInfoDetailActivity.this)
+                    .load(piclink)
+                    .apply(options)
+                    .into(img_pic);
         }
     }
 }

@@ -1,99 +1,128 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="#f5f5f5">
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:scrollbars="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="2dp">
 
-            <!-- 封面推荐 -->
+            <!-- 封面推荐 - 去掉背景和阴影 -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="330dp"
                 android:orientation="vertical"
-                android:paddingBottom="5dp">
+                android:layout_marginBottom="8dp"
+                android:padding="8dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="封面推荐"
-                    android:textColor="@color/dialog_black"
-                    android:textStyle="bold" />
-                <ListView
+                    android:textSize="18sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold"
+                    android:paddingBottom="8dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
                     android:layout_width="match_parent"
-                    android:layout_height="170dp"
-                    android:id="@+id/listview_fengtui"/>
+                    android:layout_height="match_parent"
+                    android:id="@+id/recyclerview_fengtui"
+                    android:scrollbars="vertical"
+                    app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+                    app:spanCount="2"/>
 
             </LinearLayout>
 
-            <!-- 上期强推 -->
+            <!-- 上期强推 - 去掉背景和阴影 -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="330dp"
                 android:orientation="vertical"
-                android:paddingBottom="5dp">
+                android:layout_marginBottom="8dp"
+                android:padding="8dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="上期强推"
-                    android:textColor="@color/dialog_black"
-                    android:textStyle="bold" />
+                    android:textSize="18sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold"
+                    android:paddingBottom="8dp"/>
 
-                <ListView
+                <androidx.recyclerview.widget.RecyclerView
                     android:layout_width="match_parent"
-                    android:layout_height="255dp"
-                    android:id="@+id/listview_qiangtui"/>
+                    android:layout_height="match_parent"
+                    android:id="@+id/recyclerview_qiangtui"
+                    android:scrollbars="vertical"
+                    app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+                    app:spanCount="2"/>
             </LinearLayout>
 
-            <!-- 最新入库 -->
+            <!-- 最新入库 - 去掉背景和阴影 -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="330dp"
                 android:orientation="vertical"
-                android:paddingBottom="5dp">
+                android:layout_marginBottom="8dp"
+                android:padding="8dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="最新入库"
-                    android:textColor="@color/dialog_black"
-                    android:textStyle="bold" />
+                    android:textSize="18sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold"
+                    android:paddingBottom="8dp"/>
 
-                <ListView
+                <androidx.recyclerview.widget.RecyclerView
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/listview_newbooks"/>
+                    android:layout_height="match_parent"
+                    android:id="@+id/recyclerview_newbooks"
+                    android:scrollbars="vertical"
+                    app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+                    app:spanCount="2"/>
             </LinearLayout>
 
-            <!-- 最近更新 -->
+            <!-- 最近更新 - 去掉背景和阴影 -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="330dp"
                 android:orientation="vertical"
-                android:paddingBottom="5dp">
+                android:padding="8dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="最近更新"
-                    android:textColor="@color/dialog_black"
-                    android:textStyle="bold" />
+                    android:textSize="18sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold"
+                    android:paddingBottom="8dp"/>
 
-                <ListView
+                <androidx.recyclerview.widget.RecyclerView
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/listview_recentupdate"/>
+                    android:layout_height="match_parent"
+                    android:id="@+id/recyclerview_recentupdate"
+                    android:scrollbars="vertical"
+                    app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+                    app:spanCount="2"/>
             </LinearLayout>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>

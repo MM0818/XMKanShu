@@ -20,6 +20,8 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author ZQZESS
@@ -114,103 +116,64 @@ public class GetAndRead {
 
     public static ArrayList<Chapter> getChapter(String url, int chapternum) {
         Document alldoc;
-        Log.d("调试_章节列表", "开始爬取章节，书籍详情页链接：" + url);
-
+        ArrayList<Chapter> chapterList = new ArrayList<>();
         try {
-            Log.d("GetChapter", "请求正确URL: " + url);
-            alldoc = Jsoup.connect(url)
+            Log.d("GetChapter", "原始URL: " + url);
+            // 清洗URL：去掉重复的域名、多余的/等
+            String cleanUrl;
+            if (url.startsWith("http")) {
+                cleanUrl = url;
+            } else if (url.startsWith("/")) {
+                cleanUrl = "https://www.uuubqg.cc" + url;
+            } else {
+                cleanUrl = "https://www.uuubqg.cc/" + url;
+            }
+            // 处理重复域名的情况（关键修复）
+            cleanUrl = cleanUrl.replaceAll("https?://www.uuubqg.cchttps?://", "https://");
+            cleanUrl = cleanUrl.replaceAll("https?://www.uuubqg.cc/https?://", "https://");
+            Log.d("GetChapter", "清洗后URL: " + cleanUrl);
+
+            alldoc = Jsoup.connect(cleanUrl)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36")
                     .timeout(10000)
                     .get();
-            Log.d("GetChapter", "网页内容长度: " + alldoc.html().length());
 
-            // ======================================
-            // 核心修改：只抓取「正文卷」部分的章节
-            // ======================================
-            Elements chapters = new Elements();
-
-            // 1. 找到包含"正文卷"的<dt>标签
+            // 查找正文卷标签（严格按要求）
             Element mainContentDt = alldoc.selectFirst("div.listmain dl dt:contains(正文卷)");
-
             if (mainContentDt != null) {
-                Log.d("GetChapter", "找到正文卷标签：" + mainContentDt.text().trim());
-
-                // 2. 获取正文卷<dt>后面的所有兄弟节点
+                Log.d("GetChapter", "找到正文卷标签，开始解析章节");
                 Elements siblings = mainContentDt.nextElementSiblings();
-
-                // 3. 遍历所有兄弟节点，收集所有<dd>里的<a>标签
                 for (Element sibling : siblings) {
-                    // 如果遇到下一个<dt>标签（比如"最新章节"或其他卷），就停止收集
                     if (sibling.tagName().equals("dt")) {
-                        Log.d("GetChapter", "遇到下一个dt标签，停止收集: " + sibling.text());
+                        Log.d("GetChapter", "遇到其他DT标签，停止解析正文卷: " + sibling.text());
                         break;
                     }
-
-                    // 只收集<dd>标签中的<a>标签
                     if (sibling.tagName().equals("dd")) {
                         Element aTag = sibling.selectFirst("a");
                         if (aTag != null) {
-                            chapters.add(aTag);
+                            String title = aTag.text().trim();
+                            String chapterUrl = aTag.attr("href").trim();
+                            if (chapterUrl.startsWith("/")) {
+                                chapterUrl = "https://www.uuubqg.cc" + chapterUrl;
+                            }
+                            chapterList.add(new Chapter(title, chapterUrl));
+                            Log.d("GetChapter", "添加正文卷章节: " + title);
+                        } else {
+                            Log.w("GetChapter", "DD标签中无A标签: " + sibling.html());
                         }
                     }
                 }
-
-                Log.d("GetChapter", "从正文卷部分获取到章节数: " + chapters.size());
-
             } else {
-                // 兼容逻辑：如果没找到"正文卷"标签，使用原来的选择器
-                Log.d("GetChapter", "未找到「正文卷」标签，使用备用选择器");
-                chapters = alldoc.select("#list dl dd a");
-                if (chapters.isEmpty()) {
-                    chapters = alldoc.select(".chapter-list ul li a");
-                }
-                if (chapters.isEmpty()) {
-                    chapters = alldoc.select("div.chapter-list a");
-                }
-                if (chapters.isEmpty()) {
-                    chapters = alldoc.select("ul.chapter a");
-                }
+                Log.w("GetChapter", "未找到正文卷标签，解析失败");
             }
 
-            // ======================================
-            // 解析章节数据（保持不变）
-            // ======================================
-            if (!chapters.isEmpty()) {
-                GlobalConfig.list.clear();
-
-                // 注意：现在不需要跳过前面的章节了，因为我们已经只获取了正文卷部分
-                for (Element e : chapters) {
-                    String chapterTitle = e.text().trim();
-                    String chapterHref = e.attr("href").trim();
-
-                    // 确保URL是完整的（处理相对路径）
-                    String chapterUrl;
-                    if (chapterHref.startsWith("http")) {
-                        chapterUrl = chapterHref;
-                    } else {
-                        chapterUrl = "https://www.biqugeu.net" + chapterHref;
-                    }
-
-                    Chapter chapter = new Chapter(chapterTitle, chapterUrl);
-                    GlobalConfig.list.add(chapter);
-                }
-
-                Log.d("GetChapter", "成功获取 " + GlobalConfig.list.size() + " 个章节（仅正文卷）");
-
-            } else {
-                Log.e("GetChapter", "未匹配到任何章节！");
-                // 打印章节容器HTML，方便调试
-                Element listMain = alldoc.selectFirst("div.listmain");
-                if (listMain != null) {
-                    Log.d("GetChapter", "章节容器HTML: " + listMain.html().substring(0, Math.min(2000, listMain.html().length())));
-                }
-            }
+            Log.d("GetChapter", "章节解析完成，共获取: " + chapterList.size() + " 个章节");
 
         } catch (Exception e) {
-            Log.e("GetChapter", "爬取失败: " + e.getMessage());
-            e.printStackTrace();
+            Log.e("GetChapter", "章节解析失败: " + e.getMessage(), e); // 打印完整堆栈
         }
-        return GlobalConfig.list;
+        GlobalConfig.list = chapterList;
+        return chapterList;
     }
 
     public static void ReadingBackground(final int chapternow)
@@ -459,39 +422,65 @@ public class GetAndRead {
             // 1. 获取封面推荐（只有这4本书有封面）
             Elements hotItems = doc.select("div.hot div.l div.item");
             ArrayList<BookInfo> coverRecommendations = new ArrayList<>();
+            // 直接使用方法参数的baseUrl，删除重复定义的String baseUrl = "https://www.uuubqg.cc";
             for (Element item : hotItems) {
-                // 获取封面图片
-                Element img = item.selectFirst("img");
-                String coverUrl = img != null ? img.attr("src") : "";
+                // ========== 关键修改1：精确定位图片元素 ==========
+                Element img = item.selectFirst("div.image a img"); // 按层级找img，更精准
+                String coverUrl = "";
+                if (img != null) {
+                    String relativeUrl = img.attr("src").trim();
+                    // ========== 关键修改2：处理相对路径为绝对路径（用方法参数的baseUrl） ==========
+                    if (!relativeUrl.isEmpty()) {
+                        if (relativeUrl.startsWith("/")) {
+                            coverUrl = baseUrl + relativeUrl; // 拼接方法参数的域名
+                        } else if (relativeUrl.startsWith("http")) {
+                            coverUrl = relativeUrl; // 已经是绝对路径，直接用
+                        } else {
+                            coverUrl = baseUrl + "/" + relativeUrl; // 其他情况（极少）
+                        }
+                    }
+                }
 
-                // 获取书籍链接和标题
+                // 获取书籍链接和标题（这部分可以保留，也可以按层级优化）
                 Element link = item.selectFirst("dl dt a");
-                String title = link != null ? link.text() : "";
-                String bookUrl = link != null ? link.attr("href") : "";
+                String title = link != null ? link.text().trim() : "";
+                String bookUrl = "";
+                if (link != null) {
+                    String relativeBookUrl = link.attr("href").trim();
+                    // 书籍链接也处理为绝对路径（可选，但建议统一）
+                    if (!relativeBookUrl.isEmpty()) {
+                        if (relativeBookUrl.startsWith("/")) {
+                            bookUrl = baseUrl + relativeBookUrl;
+                        } else {
+                            bookUrl = relativeBookUrl;
+                        }
+                    }
+                }
 
-                // 获取作者
+                // 获取作者（这部分保留，注意trim()去空格）
                 Element authorSpan = item.selectFirst("dl dt span");
-                String author = authorSpan != null ? authorSpan.text() : "";
+                String author = authorSpan != null ? authorSpan.text().trim() : "";
 
-                // 获取简介
+                // 获取简介（trim()去空格，避免多余换行/空格）
                 Element desc = item.selectFirst("dl dd");
-                String description = desc != null ? desc.text() : "";
+                String description = desc != null ? desc.text().trim() : "";
 
-                // 使用你现有的BookInfo构造函数
+                // 构造BookInfo（保留）
                 BookInfo book = new BookInfo(
                         title,          // name
                         author,         // author
                         bookUrl,        // link
                         "",             // picname (可以为空)
-                        coverUrl,       // piclink (只有这4本书有封面)
+                        coverUrl,       // piclink (现在是绝对路径)
                         description,    // info
                         "",             // lasttime
                         "",             // newchapter
                         "",             // newchapterlink
                         0               // chapternum
                 );
-
                 coverRecommendations.add(book);
+                // 新增日志：打印封面URL，方便调试
+                Log.d("CoverRecommend", "书名：" + title + "，封面URL：" + coverUrl);
             }
             bookStoreData.setCoverRecommendations(coverRecommendations);
 
@@ -499,54 +488,73 @@ public class GetAndRead {
             Elements strongRecommendations = doc.select("div.hot div.r.bd ul.lis li, div.hot div.r ul.lis li");
             ArrayList<BookInfo> strongRecs = new ArrayList<>();
             for (Element item : strongRecommendations) {
+                // 初始化所有变量，避免空指针
+                String title = "";
+                String bookUrl = "";
+                String categoryText = "";
+                String coverUrl = "";
+                String description = "";
+                String author = ""; // 作者变量提前初始化
+
                 // 获取标题和链接
                 Element link = item.selectFirst("a");
-                String title = link != null ? link.text() : "";
-                String bookUrl = link != null ? link.attr("href") : "";
+                if (link != null) {
+                    title = link.text();
+                    bookUrl = link.attr("href");
+                }
 
                 // 获取分类
                 Element category = item.selectFirst("span.s1");
-                String categoryText = category != null ? category.text() : "";
+                if (category != null) {
+                    categoryText = category.text();
+                }
 
                 Log.d("GetBookStore", "强力推荐书籍: " + title + ", 链接: " + bookUrl + ", 分类: " + categoryText);
 
-                // 为强力推荐的书籍获取封面和简介
-                String coverUrl = "";
-                String description = categoryText; // 先用分类作为默认简介
-
+                // 为强力推荐的书籍获取封面、简介和作者（关键修改）
                 if (bookUrl != null && !bookUrl.isEmpty()) {
                     HashMap<String, String> bookInfo = getBookInfoFromDetailPage(bookUrl);
-                    coverUrl = bookInfo.get("cover");
-                    String detailedDescription = bookInfo.get("description");
-                    String author = bookInfo.get("author");
-
-                    // 在获取简介后可以限制长度
-                    if (description.length() > 100) {
-                        description = description.substring(0, 100) + "...";
+                    // 获取封面
+                    if (bookInfo.containsKey("cover")) {
+                        coverUrl = bookInfo.get("cover");
                     }
-
-                    // 如果有获取到简介，使用获取的简介，否则使用分类
-                    if (detailedDescription != null && !detailedDescription.isEmpty()) {
-                        description = detailedDescription;
+                    // 获取简介
+                    if (bookInfo.containsKey("description")) {
+                        String detailedDescription = bookInfo.get("description");
+                        if (detailedDescription != null && !detailedDescription.isEmpty()) {
+                            description = detailedDescription;
+                            // 限制简介长度（可选）
+                            if (description.length() > 100) {
+                                description = description.substring(0, 100) + "...";
+                            }
+                        }
                     }
-
-                    // 如果有获取到作者，使用获取的作者
-                    if (author != null && !author.isEmpty()) {
-                        categoryText = author; // 这里用作者替换分类，或者你可以新增一个字段
+                    // 获取作者（关键：这里正确拿到作者并赋值给author变量）
+                    if (bookInfo.containsKey("author")) {
+                        String detailAuthor = bookInfo.get("author");
+                        if (detailAuthor != null && !detailAuthor.isEmpty()) {
+                            author = detailAuthor; // 把作者存到author变量里，不是categoryText！
+                        }
                     }
                 }
 
+                // 如果简介还是空的，用分类填充（可选，看你需求）
+                if (description.isEmpty()) {
+                    description = categoryText;
+                }
+
+                // 构造BookInfo对象（关键：把author变量传进去）
                 BookInfo book = new BookInfo(
-                        title,          // name
-                        "",             // author (暂时留空，可以从详情页获取)
-                        bookUrl,        // link
-                        "",             // picname
-                        coverUrl,       // piclink (现在有封面了)
-                        description,    // info (现在有简介了)
-                        "",             // lasttime
-                        "",             // newchapter
-                        "",             // newchapterlink
-                        0               // chapternum
+                        title,
+                        author, // 这里直接传author变量，有值就是作者，没值就是空字符串（初始化过的）
+                        bookUrl,
+                        "",
+                        coverUrl,
+                        description,
+                        "",
+                        "",
+                        "",
+                        0
                 );
 
                 strongRecs.add(book);
@@ -554,8 +562,72 @@ public class GetAndRead {
             bookStoreData.setStrongRecommendations(strongRecs);
             Log.d("GetBookStore", "最终强力推荐书籍数量: " + strongRecs.size());
 
+            // 3. 获取最新入库（现在会获取封面和简介）
+            // 3. 获取最新入库（现在会获取封面和简介、作者）
+            Elements newBooks = doc.select("div.up div.r ul li");
+            ArrayList<BookInfo> newBookList = new ArrayList<>();
+            for (Element item : newBooks) {
+                // 书名和链接
+                Element titleLink = item.selectFirst("span.s2 a");
+                String title = titleLink != null ? titleLink.text() : "";
+                String bookUrl = titleLink != null ? titleLink.attr("href") : "";
+
+                // 入库时间
+                Element addTime = item.selectFirst("span.s5");
+                String addTimeStr = addTime != null ? addTime.text() : "";
+
+                // 分类
+                Element category = item.selectFirst("span.s1");
+                String categoryText = category != null ? category.text() : "";
+
+                // 初始化作者变量（关键：新增）
+                String author = "";
+
+                // 为最新入库的书籍获取封面、简介和作者（关键：补充作者逻辑）
+                String coverUrl = "";
+                String description = categoryText; // 先用分类作为默认简介
+
+                if (bookUrl != null && !bookUrl.isEmpty()) {
+                    HashMap<String, String> bookInfo = getBookInfoFromDetailPage(bookUrl);
+                    coverUrl = bookInfo.get("cover");
+                    String detailedDescription = bookInfo.get("description");
+
+                    // 从详情页获取作者（关键：新增）
+                    String detailAuthor = bookInfo.get("author");
+                    if (detailAuthor != null && !detailAuthor.isEmpty()) {
+                        author = detailAuthor; // 把详情页的作者赋值给变量
+                    }
+
+                    // 先替换简介，再限制长度（和最近更新保持一致的逻辑，修复小bug）
+                    if (detailedDescription != null && !detailedDescription.isEmpty()) {
+                        description = detailedDescription;
+                    }
+                    // 限制简介长度（移到替换简介之后）
+                    if (description.length() > 100) {
+                        description = description.substring(0, 100) + "...";
+                    }
+                }
+
+                BookInfo book = new BookInfo(
+                        title,              // name
+                        author,             // author（关键：传作者变量，不再是空字符串）
+                        bookUrl,            // link
+                        "",                 // picname
+                        coverUrl,           // piclink
+                        description,        // info
+                        addTimeStr,         // lasttime
+                        "",                 // newchapter
+                        "",                 // newchapterlink
+                        0                   // chapternum
+                );
+
+                newBookList.add(book);
+            }
+            bookStoreData.setNewBooks(newBookList);
+
             // 修改最近更新的部分
-// 3. 获取最近更新（现在会获取封面和简介）
+            // 4. 获取最近更新（现在会获取封面和简介）
+            // 4. 获取最近更新（现在会获取封面和简介）
             Elements recentUpdates = doc.select("div.up div.l ul li");
             ArrayList<BookInfo> recentUpdateList = new ArrayList<>();
             for (Element item : recentUpdates) {
@@ -569,9 +641,10 @@ public class GetAndRead {
                 String latestChapter = chapterLink != null ? chapterLink.text() : "";
                 String latestChapterUrl = chapterLink != null ? chapterLink.attr("href") : "";
 
-                // 作者
+                // 作者（首页span.s4）
                 Element authorElement = item.selectFirst("span.s4");
                 String authorName = authorElement != null ? authorElement.text() : "";
+                String author = authorName; // 先初始化作者为首页获取的名字（关键修改1）
 
                 // 更新时间
                 Element updateTime = item.selectFirst("span.s5");
@@ -590,30 +663,35 @@ public class GetAndRead {
                     coverUrl = bookInfo.get("cover");
                     String detailedDescription = bookInfo.get("description");
 
-                    // 在获取简介后可以限制长度
-                    if (description.length() > 100) {
-                        description = description.substring(0, 100) + "...";
-                    }
-
-                    // 如果有获取到简介，使用获取的简介，否则使用分类
+                    // 如果有获取到详情页简介，替换默认简介（关键修改2：先替换，再截断）
                     if (detailedDescription != null && !detailedDescription.isEmpty()) {
                         description = detailedDescription;
                     }
 
-                    // 如果详情页有作者信息，使用详情页的作者
+                    // 限制简介长度（移到替换简介之后，关键修改2）
+                    if (description.length() > 100) {
+                        description = description.substring(0, 100) + "...";
+                    }
+
+                    // 如果详情页有作者信息，覆盖首页的作者名（优先详情页，关键修改3）
                     String detailAuthor = bookInfo.get("author");
                     if (detailAuthor != null && !detailAuthor.isEmpty()) {
-                        authorName = detailAuthor;
+                        author = detailAuthor;
+                    }
+                } else {
+                    // 如果没有详情页链接，也检查默认简介长度（可选，看需求）
+                    if (description.length() > 100) {
+                        description = description.substring(0, 100) + "...";
                     }
                 }
 
                 BookInfo book = new BookInfo(
                         title,              // name
-                        authorName,         // author
+                        author,             // author（现在是合并后的值，关键修改4）
                         bookUrl,            // link
                         "",                 // picname
-                        coverUrl,           // piclink (现在有封面了)
-                        description,        // info (现在有简介了)
+                        coverUrl,           // piclink
+                        description,        // info
                         updateTimeStr,      // lasttime
                         latestChapter,      // newchapter
                         latestChapterUrl,   // newchapterlink
@@ -623,60 +701,6 @@ public class GetAndRead {
                 recentUpdateList.add(book);
             }
             bookStoreData.setRecentUpdates(recentUpdateList);
-
-// 4. 获取最新入库（现在会获取封面和简介）
-            Elements newBooks = doc.select("div.up div.r ul li");
-            ArrayList<BookInfo> newBookList = new ArrayList<>();
-            for (Element item : newBooks) {
-                // 书名和链接
-                Element titleLink = item.selectFirst("span.s2 a");
-                String title = titleLink != null ? titleLink.text() : "";
-                String bookUrl = titleLink != null ? titleLink.attr("href") : "";
-
-                // 入库时间
-                Element addTime = item.selectFirst("span.s5");
-                String addTimeStr = addTime != null ? addTime.text() : "";
-
-                // 分类
-                Element category = item.selectFirst("span.s1");
-                String categoryText = category != null ? category.text() : "";
-
-                // 为最新入库的书籍获取封面和简介
-                String coverUrl = "";
-                String description = categoryText; // 先用分类作为默认简介
-
-                if (bookUrl != null && !bookUrl.isEmpty()) {
-                    HashMap<String, String> bookInfo = getBookInfoFromDetailPage(bookUrl);
-                    coverUrl = bookInfo.get("cover");
-                    String detailedDescription = bookInfo.get("description");
-
-                    // 在获取简介后可以限制长度
-                    if (description.length() > 100) {
-                        description = description.substring(0, 100) + "...";
-                    }
-
-                    // 如果有获取到简介，使用获取的简介，否则使用分类
-                    if (detailedDescription != null && !detailedDescription.isEmpty()) {
-                        description = detailedDescription;
-                    }
-                }
-
-                BookInfo book = new BookInfo(
-                        title,              // name
-                        "",                 // author
-                        bookUrl,            // link
-                        "",                 // picname
-                        coverUrl,           // piclink (现在有封面了)
-                        description,        // info (现在有简介了)
-                        addTimeStr,         // lasttime (用入库时间)
-                        "",                 // newchapter
-                        "",                 // newchapterlink
-                        0                   // chapternum
-                );
-
-                newBookList.add(book);
-            }
-            bookStoreData.setNewBooks(newBookList);
 
             Log.d("GetBookStore", "成功获取书城数据: " +
                     "封面推荐=" + coverRecommendations.size() + ", " +
@@ -748,46 +772,47 @@ public class GetAndRead {
                 String authorText = authorElement.text().trim();
                 Log.d("GetBookInfoDetail", "作者原始文本: " + authorText);
 
-                // 提取作者名
-                String author = extractInfo(authorText, "作者");
-                if (author != null && !author.isEmpty()) {
+                // 手动处理作者文本，去掉前缀（处理全角空格、半角空格、冒号的情况）
+                String author = "";
+                // 替换所有全角空格和半角空格，方便统一处理
+                String cleanText = authorText.replaceAll("[\\s|&nbsp;|&ensp;|&emsp;]", "").replaceAll("　", "");
+                // 找到“作者：”的位置（处理“作者：”或“作作者：”等错误，实际是“作者：”）
+                int colonIndex = cleanText.indexOf("作者：");
+                if (colonIndex != -1) {
+                    author = cleanText.substring(colonIndex + 3).trim(); // “作者：”是3个字符（作+者+：）
+                } else {
+                    // 兼容其他格式，比如“作 者：”（带空格），去掉所有非文字部分，取后面的内容
+                    author = authorText.replaceAll("^.*[：:]", "").trim(); // 匹配任意字符直到最后一个冒号（全角/半角），取后面的内容
+                }
+
+                if (!author.isEmpty()) {
                     bookInfo.put("author", author);
                     Log.d("GetBookInfoDetail", "提取到作者: " + author);
                 }
             }
 
-            // 3. 获取最后更新时间
+            // 3.爬取最后更新时间
             Element lastTimeElement = doc.selectFirst("#info p:contains(最后更新)");
             if (lastTimeElement != null) {
                 String lastTimeText = lastTimeElement.text().trim();
-                Log.d("GetBookInfoDetail", "最后更新原始文本: " + lastTimeText);
-
-                String lastTime = extractInfo(lastTimeText, "最后更新");
-                if (lastTime != null && !lastTime.isEmpty()) {
-                    bookInfo.put("lasttime", lastTime);
-                    Log.d("GetBookInfoDetail", "提取到最后更新时间: " + lastTime);
-                }
+                // 提取时间（如“最后更新：2016-06-06 05:28:12”→“2016-06-06 05:28:12”）
+                String lastTime = lastTimeText.replaceAll("最后更新：", "").trim();
+                bookInfo.put("lasttime", lastTime);
+                Log.d("GetBookInfoDetail", "提取到最后更新时间: " + lastTime);
             }
 
-            // 4. 获取最新章节
-            Element newChapterElement = doc.selectFirst("#info p:contains(最新章节)");
+            // 4.爬取最新章节
+            Element newChapterElement = doc.selectFirst("#info p:contains(最新章节) a");
             if (newChapterElement != null) {
-                String newChapterText = newChapterElement.text().trim();
-                Log.d("GetBookInfoDetail", "最新章节原始文本: " + newChapterText);
-
-                // 优先从链接获取
-                Element chapterLink = newChapterElement.selectFirst("a");
-                if (chapterLink != null) {
-                    String newChapter = chapterLink.text().trim();
-                    bookInfo.put("newchapter", newChapter);
-                    Log.d("GetBookInfoDetail", "从链接提取最新章节: " + newChapter);
-                } else {
-                    // 如果没有链接，从文本提取
-                    String newChapter = extractInfo(newChapterText, "最新章节");
-                    if (newChapter != null && !newChapter.isEmpty()) {
-                        bookInfo.put("newchapter", newChapter);
-                        Log.d("GetBookInfoDetail", "从文本提取最新章节: " + newChapter);
-                    }
+                String newChapter = newChapterElement.text().trim();
+                bookInfo.put("newchapter", newChapter);
+                Log.d("GetBookInfoDetail", "提取到最新章节: " + newChapter);
+            } else {
+                // 若a标签不存在，直接从p标签提取
+                Element newChapterP = doc.selectFirst("#info p:contains(最新章节)");
+                if (newChapterP != null) {
+                    String newChapterText = newChapterP.text().trim().replaceAll("最新章节：", "").trim();
+                    bookInfo.put("newchapter", newChapterText);
                 }
             }
 
@@ -852,23 +877,24 @@ public class GetAndRead {
     }
 
     // 辅助方法：从文本中提取信息
-    private static String extractInfo(String text, String keyword) {
-        if (text == null || text.isEmpty()) {
+    private static String extractInfo(String text, String key) {
+        if (text == null || text.isEmpty() || key == null || key.isEmpty()) {
             return "";
         }
-
-        // 尝试多种分隔符
-        String[] separators = {"：", ":", " "};
-        for (String sep : separators) {
-            if (text.contains(keyword + sep)) {
-                String[] parts = text.split(keyword + sep);
-                if (parts.length > 1) {
-                    return parts[1].trim();
-                }
-            }
+        // 处理带空格的情况，比如“作 者”“作   者”“作者”等，先把key变成模糊匹配（比如key是“作者”，匹配“作.*者”）
+        String regex = key.replace("", ".*"); // 变成“作.*者”，匹配中间任意字符（空格、全角空格等）
+        // 匹配“作*者：”（*表示任意字符），全角冒号和半角冒号都处理
+        Pattern pattern = Pattern.compile(regex + "[：:]", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(text);
+        if (matcher.find()) {
+            int endIndex = matcher.end();
+            return text.substring(endIndex).trim();
         }
-
-        // 如果以上都不行，尝试直接移除关键词
-        return text.replace(keyword, "").trim();
+        // 兼容直接按冒号分割的情况
+        String[] parts = text.split("[：:]");
+        if (parts.length >= 2) {
+            return parts[1].trim();
+        }
+        return "";
     }
 }
