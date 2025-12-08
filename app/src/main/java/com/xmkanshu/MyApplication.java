@@ -1,6 +1,8 @@
 package com.xmkanshu;
 
 import android.app.Application;
+import android.util.Log;
+import com.xmkanshu.Manager.BookDataManager;
 
 /**
  * @author ZQZESS
@@ -23,6 +25,10 @@ public class MyApplication extends Application {
         super.onCreate();
         TAG = this.getClass().getSimpleName();
         myApplication = this;
+
+        // 新增：应用启动时后台预加载书城数据
+        Log.d(TAG, "应用启动，开始后台预加载书城数据");
+        BookDataManager.getInstance().preloadBookCityData(this); // 传入Application上下文，避免内存泄漏
 
     }
 }

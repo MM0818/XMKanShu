@@ -20,6 +20,7 @@ import com.xmkanshu.Adapter.BookGridRecyclerAdapter;
 import com.xmkanshu.Adapter.CustomGridLayoutManager;
 import com.xmkanshu.Data.BookInfo;
 import com.xmkanshu.Data.BookStoreData;
+import com.xmkanshu.Manager.BookDataManager;
 import com.xmkanshu.R;
 import com.xmkanshu.Reptile.GetAndRead;
 
@@ -62,9 +63,54 @@ public class BookCityTopFragment extends Fragment {
         setupRecyclerViewLayoutManagers();
         setupScrollConflictResolution();
 
-        new BookStoreDataTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        //否掉手动
+        //new BookStoreDataTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+
+        // 核心修改：从BookDataManager获取预加载数据
+        loadBookStoreData();
 
         return view;
+    }
+
+    //后台抓取相关方法
+    private void loadBookStoreData() {
+        // 显示加载对话框
+        loadingDialog.show();
+
+        // 尝试获取缓存数据
+        BookStoreData bookStoreData = BookDataManager.getInstance().getBookCityCache();
+        if (bookStoreData != null) {
+            // 数据已预加载完成，直接更新UI
+            updateBookStoreUI(bookStoreData);
+            loadingDialog.dismiss();
+        } else {
+            // 数据未加载完成，注册监听
+            BookDataManager.getInstance().setOnBookDataLoadListener(new BookDataManager.OnBookDataLoadListener() {
+                @Override
+                public void onLoadCompleted(BookStoreData data) {
+                    // 主线程更新UI
+                    updateBookStoreUI(data);
+                    loadingDialog.dismiss();
+                }
+
+                @Override
+                public void onLoadFailed(String error) {
+                    Log.e("BookCityTop", "书城数据加载失败: " + error);
+                    loadingDialog.dismiss();
+                }
+            });
+        }
+    }
+    //后台抓取相关方法
+    private void updateBookStoreUI(BookStoreData data) {
+        if (data == null) return;
+
+        updateCoverRecommendations(data.getCoverRecommendations());
+        updateStrongRecommendations(data.getStrongRecommendations());
+        updateRecentUpdates(data.getRecentUpdates());
+        updateNewBooks(data.getNewBooks());
+
+        Log.d("BookCityTop", "书城数据加载完成（预加载）");
     }
 
     private void initDataSources() {
@@ -345,9 +391,22 @@ public class BookCityTopFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
 
+        //移除BookDataManager的监听
+//        if (fengTuiAdapter != null) fengTuiAdapter.clear();
+//        if (qiangTuiAdapter != null) qiangTuiAdapter.clear();
+//        if (newBooksAdapter != null) newBooksAdapter.clear();
+//        if (recentUpdateAdapter != null) recentUpdateAdapter.clear();
+
+        BookDataManager.getInstance().removeOnBookDataLoadListener();
+
         if (fengTuiAdapter != null) fengTuiAdapter.clear();
         if (qiangTuiAdapter != null) qiangTuiAdapter.clear();
         if (newBooksAdapter != null) newBooksAdapter.clear();
         if (recentUpdateAdapter != null) recentUpdateAdapter.clear();
+
+        // 关闭加载对话框（防止内存泄漏）
+        if (loadingDialog != null && loadingDialog.isShowing()) {
+            loadingDialog.dismiss();
+        }
     }
 }
