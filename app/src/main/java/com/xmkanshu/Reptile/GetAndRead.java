@@ -176,62 +176,30 @@ public class GetAndRead {
         return chapterList;
     }
 
+    // GetAndRead.java - 修改ReadingBackground方法
     public static void ReadingBackground(final int chapternow)
     {
-//        final ArrayList<HashMap<String, String>> list ;
-//        list=new ArrayList<HashMap<String, String>>();
-        Thread thread1=new Thread(new Runnable() {
+        Thread thread1 = new Thread(new Runnable() {
             @Override
             public void run() {
-                int tmpcount=chapternow-2;
-                for(int i=0;i<5;i++)
-                {
-                    tmpcount+=1;
-                    if(tmpcount<=GlobalConfig.list.size()-1||tmpcount>=0)
-                    {
-                        //                    String tmpstring=GetBookContent(GlobalConfig.list.get(i).get("link"));//爬取章节内容
-//                    tmpstring=splitContentFirst(tmpstring);//分段
-                        try{
-                            //BookContentCache.getCache(GlobalConfig.list.get(tmpcount).get("link"));//检查是否存在缓存
-
-                            // 修正后：先获取 Chapter 对象，再调用 getUrl()
+                int tmpcount = chapternow - 2;
+                for (int i = 0; i < 5; i++) {
+                    tmpcount += 1;
+                    // 关键修复：使用 && 且检查边界
+                    if (tmpcount >= 0 && tmpcount < GlobalConfig.list.size()) {
+                        try {
                             Chapter chapter = GlobalConfig.list.get(tmpcount);
-                            BookContentCache.getCache(chapter.getUrl()); // 用 getUrl() 获取章节链接
-                        }catch (Exception e)
-                        {
-                            e.printStackTrace();
+                            BookContentCache.getCache(chapter.getUrl());
+                        } catch (Exception e) {
+                            Log.e("GetAndRead", "预加载章节" + tmpcount + "失败: " + e.getMessage());
                         }
                     }
                 }
             }
         });
         thread1.start();
-//        try {
-//            thread1.join();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
     }
 
-//    //章节内容爬取
-//    public static String GetBookContent(String url)
-//    {
-//        Document alldoc;
-//        String content="";
-//        try
-//        {
-//            alldoc = Jsoup.connect(url).data("query", "Java").
-//                    userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36")
-//                    .timeout(5000).get();
-//            content = alldoc.select("#content").text();//trim() 删除字符串首尾空白字符
-////            String title = alldoc.select("#wrapper > div.content_read > div.box_con > div.bookname > h1").text().trim();
-//        }catch(Exception e)
-//        {
-//            e.printStackTrace();
-    ////            Toast.makeText(mContext, "章节链接不完整或错误", Toast.LENGTH_SHORT).show();
-//        }
-//        return content;
-//    }
 
     //章节内容爬取
     public static String GetBookContent(String url) {

@@ -1,6 +1,7 @@
 package com.xmkanshu.UI;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import android.content.BroadcastReceiver;
@@ -13,6 +14,7 @@ import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -121,16 +123,16 @@ public class ReadingActivity extends AppCompatActivity {
                     GlobalConfig.SaveReadSetting(getApplicationContext());//保存阅读进度
                     tv_read.setImageBitmap(bitmap2);
                     try {
-                        bitmap.recycle();
+                        //bitmap.recycle();  //老版本这样写会卡
                         bitmap = null;
-                        System.gc();
+                        //System.gc();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
 //                    Toast.makeText(getApplicationContext(), "右：X="+event.getX()+"Y="+event.getY(), Toast.LENGTH_SHORT).show();
                 }
                 /*
-                 *左侧
+                 *左侧翻页
                  */
                 if (isLeft) {
                     GlobalConfig.Page = GlobalConfig.Page - 1;
@@ -151,9 +153,9 @@ public class ReadingActivity extends AppCompatActivity {
                     GlobalConfig.SaveReadSetting(getApplicationContext());//保存阅读进度
                     tv_read.setImageBitmap(bitmap);
                     try {
-                        bitmap2.recycle();
+                        //bitmap2.recycle();  //老
                         bitmap2 = null;
-                        System.gc();
+                        //System.gc();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -172,13 +174,29 @@ public class ReadingActivity extends AppCompatActivity {
     }
 
     public void intStyle() {
-        linearLayout.setBackgroundResource(ReadConfig.bgColor);
-        layout_foot.setBackgroundResource(ReadConfig.bgColor);
-        layout_title.setBackgroundResource(ReadConfig.bgColor);
+        int bgColor = resolveColor(ReadConfig.bgColor);
+        int fontColor = resolveColor(ReadConfig.fontColor);
 
-        bitmap = mReadPresenter.changePageContent(GlobalConfig.Page);
-        tv_read.setImageBitmap(bitmap);
+        layout_title.setBackgroundColor(bgColor);
+
+        tv_title.setTextColor(fontColor);
+        tv_foot.setTextColor(fontColor);
+        tv_battery_valuel.setTextColor(fontColor);
     }
+
+    private int resolveColor(int resId) {
+        try {
+            // 如果是 color 资源
+            return ContextCompat.getColor(this, resId);
+        } catch (Exception e) {
+            // 如果是 attr
+            TypedValue typedValue = new TypedValue();
+            getTheme().resolveAttribute(resId, typedValue, true);
+            return typedValue.data;
+        }
+    }
+
+
 
     public void intChapterStyle(int color, int fontColor) {
         layout_read_chapter_list_view.setBackgroundResource(color);
