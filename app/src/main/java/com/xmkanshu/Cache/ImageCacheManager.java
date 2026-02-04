@@ -6,13 +6,7 @@ import android.widget.ImageView;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader;
 
-/**
- * @author ZQZESS
- * @date 1/7/2021.
- * @file ImageCacheManager
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class ImageCacheManager {
     /**
      * 图片缓存管理类 获取ImageLoader对象

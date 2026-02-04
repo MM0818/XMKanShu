@@ -25,13 +25,6 @@ import com.xmkanshu.R;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * @author ZQZESS
- * @date 12/8/2020-9:41 PM
- * @file BookCityFragment.java
- * GitHub：https://github.com/zqzess
- *不会停止运行的app不是好app w(ﾟДﾟ)w
- */
 public class BookCityFragment extends Fragment {
 
     private ViewPager viewPager;// 声明一个viewpager对象
@@ -51,13 +44,6 @@ public class BookCityFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-//        requestWindowFeature(Window.FEATURE_NO_TITLE);
-//        setContentView(R.layout.mywx);
-//        // 初始化滑动条1/3
-//        initTabLine();
-//
-//        // 初始化界面
-//        initView();
     }
 
     @Nullable

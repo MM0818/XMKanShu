@@ -17,13 +17,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-/**
- * @author ZQZESS
- * @date 12/9/2020.
- * @file BitmapUtils
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
 public class BitmapUtils {
     /*
     *

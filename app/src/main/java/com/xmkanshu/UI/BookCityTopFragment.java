@@ -27,7 +27,7 @@ import com.xmkanshu.Reptile.GetAndRead;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-//2025.12.6-烦死了改了之后发现啊，书籍详细栏作者什么的又获取失败了而且，
+
 
 public class BookCityTopFragment extends Fragment {
     private RecyclerView recyclerViewFengTui;

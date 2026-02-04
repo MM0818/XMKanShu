@@ -37,13 +37,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 
-/**
- * @author ZQZESS
- * @date 12/8/2020-9:42 PM
- * @file SettingFragment.java
- * GitHub：https://github.com/zqzess
- *不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class SettingFragment extends Fragment {
     RightAndLeftTextView tv_update;
     String versionName;

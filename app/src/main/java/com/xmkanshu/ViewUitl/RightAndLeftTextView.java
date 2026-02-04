@@ -8,13 +8,7 @@ import android.widget.TextView;
 
 import com.xmkanshu.R;
 
-/**
- * @author ZQZESS
- * @date 2021/6/2.
- * @file RightAndLeftTextView
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class RightAndLeftTextView extends LinearLayout {
     /**
      * PS：TextView有默认 TextSize，setXxxSize时会有视差，所以setXxxText前设置为左右之中最大的 TextSize

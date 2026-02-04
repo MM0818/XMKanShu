@@ -29,13 +29,7 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.bitmap.CenterCrop;
 import com.bumptech.glide.request.RequestOptions;
 
-/**
- * @author ZQZESS
- * @date 12/9/2020-9:21 PM
- * @file BookInfoDetailActivity.java
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class BookInfoDetailActivity extends AppCompatActivity {
     TextView tv_title;
     TextView tv_name;

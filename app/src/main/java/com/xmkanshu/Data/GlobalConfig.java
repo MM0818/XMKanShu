@@ -22,13 +22,7 @@ import java.util.regex.Pattern;
 
 import static android.content.Context.MODE_PRIVATE;
 
-/**
- * @author ZQZESS
- * @date 12/13/2020.
- * @file GlobalConfig
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class GlobalConfig {
 //    public static Map<String,Picture> map=new HashMap<String,Picture>();
 //    public static ConcurrentHashMap<String,Picture> map=new ConcurrentHashMap<String,Picture>();

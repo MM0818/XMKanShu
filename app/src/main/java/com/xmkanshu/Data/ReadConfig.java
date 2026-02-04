@@ -7,13 +7,7 @@ import com.xmkanshu.R;
 
 import static android.content.Context.MODE_PRIVATE;
 
-/**
- * @author ZQZESS
- * @date 1/6/2021.
- * @file ReadConfig
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class ReadConfig {
     public static int FontSize;      //字体
     public static int bgColor;     //背景色

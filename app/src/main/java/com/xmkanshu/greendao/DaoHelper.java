@@ -10,13 +10,7 @@ import com.xmkanshu.greendao.model.Bookinfodb;
 
 import java.util.List;
 
-/**
- * @author ZQZESS
- * @date 2021/5/23.
- * @file DaoHelper
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class DaoHelper {
     //数据库名称
     private static final String DATABASE_NAME = "booklist.db";

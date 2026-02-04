@@ -26,13 +26,7 @@ import com.xmkanshu.UI.ReadingActivity;
 
 import java.math.BigDecimal;
 
-/**
- * @author ZQZESS
- * @date 1/6/2021.
- * @file ReadPresenter
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class ReadPresenter implements BasePresente {
     private Dialog mSettingDialog;//设置视图
     private Dialog mSettingDetailDialog;//详细设置视图

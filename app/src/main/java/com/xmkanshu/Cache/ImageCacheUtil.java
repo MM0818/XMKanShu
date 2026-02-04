@@ -17,13 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 
-/**
- * @author ZQZESS
- * @date 1/7/2021.
- * @file ImageCacheUtil
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class ImageCacheUtil implements ImageLoader.ImageCache {
     /**
      * 图片缓存帮助类

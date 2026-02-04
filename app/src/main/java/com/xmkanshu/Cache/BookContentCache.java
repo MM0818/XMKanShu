@@ -4,13 +4,7 @@ import com.xmkanshu.Reptile.GetAndRead;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * @author ZQZESS
- * @date 1/6/2021.
- * @file BookContentCache
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class BookContentCache {
     private static ConcurrentHashMap<String, String> cacheMap = new ConcurrentHashMap<>();
 

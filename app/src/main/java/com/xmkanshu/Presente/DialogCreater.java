@@ -15,13 +15,7 @@ import com.xmkanshu.Data.ReadConfig;
 import com.xmkanshu.R;
 import com.xmkanshu.UI.ReadingActivity;
 
-/**
- * @author ZQZESS
- * @date 1/6/2021.
- * @file DialogCreater
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class DialogCreater {
     public static Dialog createReadSetting(final ReadingActivity readingActivity,
                                            final ReadPresenter readPresenter,

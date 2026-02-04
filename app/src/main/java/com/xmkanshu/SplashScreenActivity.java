@@ -11,13 +11,6 @@ import android.view.WindowManager;
 import com.hb.dialog.dialog.LoadingDialog;
 import com.xmkanshu.greendao.DaoHelper;
 
-/**
- * @author ZQZESS
- * @date 12/8/2020-9:25 PM
- * @file SplashScreenActivity.java
- * GitHub：https://github.com/zqzess
- *不会停止运行的app不是好app w(ﾟДﾟ)w
- */
 public class SplashScreenActivity extends AppCompatActivity {
     /**
      * 延迟时间

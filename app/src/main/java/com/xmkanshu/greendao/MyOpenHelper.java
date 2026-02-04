@@ -5,13 +5,7 @@ import android.database.sqlite.SQLiteDatabase;
 
 import com.xmkanshu.greendao.green.DaoMaster;
 
-/**
- * @author ZQZESS
- * @date 2021/5/23.
- * @file MyOpenHelper
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class MyOpenHelper extends DaoMaster.OpenHelper {
     public MyOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory) {
         super(context, name, factory);

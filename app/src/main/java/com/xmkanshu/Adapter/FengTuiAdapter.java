@@ -393,13 +393,6 @@ import com.xmkanshu.R;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/**
- * @author ZQZESS
- * @date 12/9/2020.
- * @file FengTuiAdapter
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
 public class FengTuiAdapter extends BaseAdapter {
     public ArrayList<HashMap<String, String>> list;
     private int sumCount;

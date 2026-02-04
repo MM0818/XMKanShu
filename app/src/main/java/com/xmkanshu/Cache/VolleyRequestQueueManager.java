@@ -5,13 +5,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
 import com.xmkanshu.MyApplication;
 
-/**
- * @author ZQZESS
- * @date 1/7/2021.
- * @file VolleyRequestQueueManager
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class VolleyRequestQueueManager {
     /**
      * 请求队列处理类

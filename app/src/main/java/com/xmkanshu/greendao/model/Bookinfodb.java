@@ -6,13 +6,6 @@ import org.greenrobot.greendao.annotation.Generated;
 
 //import org.greenrobot.greendao.annotation.Schema;
 
-/**
- * @author ZQZESS
- * @date 2021/5/23.
- * @file BookinfoDao
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
 //@Schema(version = 1)
 @Entity(nameInDb = "BOOKINFODB")
 public class Bookinfodb {

@@ -16,13 +16,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * @author ZQZESS
- * @date 12/13/2020.
- * @file BookInfoCache
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class BookInfoCache extends HashMap {
     private static ConcurrentHashMap<String, Bitmap> imageMap = new ConcurrentHashMap<>();
     public static Bitmap loadImage(final String url, String dlink) {

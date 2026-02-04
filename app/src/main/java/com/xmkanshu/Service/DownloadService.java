@@ -14,13 +14,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.File;
 
-/**
- * @author ZQZESS
- * @date 2021/6/3.
- * @file DownloadService
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class DownloadService extends IntentService {
     private String TAG = "DownloadService";
     public static final String BROADCAST_ACTION =

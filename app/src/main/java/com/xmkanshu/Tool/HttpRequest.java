@@ -10,13 +10,7 @@ import com.xmkanshu.Cache.VolleyRequestQueueManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/**
- * @author ZQZESS
- * @date 2021/6/2.
- * @file HttpRequest
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class HttpRequest {
     public static void postJSONArray(String links, Response.Listener<JSONArray> listener, Response.ErrorListener errorListener) {
         JsonArrayRequest request = new JsonArrayRequest(Request.Method.GET, links, null, listener, errorListener);

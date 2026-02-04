@@ -4,13 +4,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-/**
- * @author ZQZESS
- * @date 1/7/2021.
- * @file MD5Utils
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class MD5Utils {
     /**
      * 9      * 使用md5的算法进行加密

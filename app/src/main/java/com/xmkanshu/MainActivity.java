@@ -20,13 +20,7 @@ import com.xmkanshu.UI.SettingFragment;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * @author ZQZESS
- * @date 12/8/2020-9:29 PM
- * @file MainActivity.java
- * GitHub：https://github.com/zqzess
- *不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class MainActivity extends AppCompatActivity {
     public static final int TAB_APPROVAL = 0;
     public static final int TAB_SEARCH = 1;

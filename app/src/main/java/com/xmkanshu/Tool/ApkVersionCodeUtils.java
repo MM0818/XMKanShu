@@ -5,13 +5,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 
-/**
- * @author ZQZESS
- * @date 2021/6/2.
- * @file ApkVersionCodeUtils
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class ApkVersionCodeUtils {
     /**
      * 获取当前本地apk的版本

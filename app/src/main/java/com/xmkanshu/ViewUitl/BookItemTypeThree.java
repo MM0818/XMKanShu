@@ -10,13 +10,7 @@ import android.widget.TextView;
 
 import com.xmkanshu.R;
 
-/**
- * @author ZQZESS
- * @date 2/19/2021.
- * @file BookItemTypeThree
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class BookItemTypeThree extends RelativeLayout {
     private BookItemTypeThree.MyItemClicked myItemClicked;
     private RelativeLayout relativeLayout1;// 容器包含项目

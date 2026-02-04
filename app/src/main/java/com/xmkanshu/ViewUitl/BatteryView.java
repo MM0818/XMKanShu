@@ -13,13 +13,7 @@ import android.os.BatteryManager;
 import android.util.AttributeSet;
 import android.view.View;
 
-/**
- * @author ZQZESS
- * @date 1/6/2021.
- * @file BatteryView
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class BatteryView extends View {
     private int mMargin = 5;    //电池内芯与边框的距离
     private int mBoder = 4;     //电池外框的宽带

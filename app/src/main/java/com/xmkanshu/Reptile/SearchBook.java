@@ -9,13 +9,7 @@ import org.jsoup.select.Elements;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/**
- * @author ZQZESS
- * @date 1/6/2021.
- * @file SearchBook
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class SearchBook {
     public static ArrayList SearchBookEvent(String KeyWords)
     {

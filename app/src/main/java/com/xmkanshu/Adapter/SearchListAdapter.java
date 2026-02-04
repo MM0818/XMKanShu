@@ -19,13 +19,6 @@ import com.xmkanshu.ViewUitl.BookItemTypeTwo;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/**
- * @author ZQZESS
- * @date 1/6/2021.
- * @file SearchListAdapter
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
 public class SearchListAdapter extends BaseAdapter {
     public ArrayList<HashMap<String, String>> list;
     Activity activity;

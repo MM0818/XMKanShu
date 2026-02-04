@@ -10,13 +10,7 @@ import androidx.fragment.app.Fragment;
 
 import com.xmkanshu.R;
 
-/**
- * @author ZQZESS
- * @date 12/8/2020.
- * @file TabItem
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class TabItem {
     private final int SelectTextColor;
     private ImageView imageviewTab;

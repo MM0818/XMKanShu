@@ -30,13 +30,7 @@ import com.xmkanshu.R;
 import com.xmkanshu.Reptile.GetAndRead;
 import com.xmkanshu.ViewUitl.BatteryView;
 
-/**
- * @author ZQZESS
- * @date 1/6/2021-7:06 PM
- * @file ReadingActivity.java
- * GitHub：https://github.com/zqzess
- *不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class ReadingActivity extends AppCompatActivity {
     public TextView tv_title;
     public TextView tv_foot;

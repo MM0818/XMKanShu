@@ -1,12 +1,6 @@
 package com.xmkanshu.Data;
 
-/**
- * @author ZQZESS
- * @date 12/13/2020.
- * @file BookInfo
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class BookInfo {
     String name;    //书名
     String author;  //作者

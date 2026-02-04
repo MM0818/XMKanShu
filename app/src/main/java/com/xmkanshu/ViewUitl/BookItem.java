@@ -11,13 +11,7 @@ import android.widget.TextView;
 import com.xmkanshu.Cache.ImageCacheManager;
 import com.xmkanshu.R;
 
-/**
- * @author ZQZESS
- * @date 12/9/2020.
- * @file BookItem
- * GitHub：https://github.com/zqzess
- * 不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class BookItem extends RelativeLayout {
     private MyItemClicked myItemClicked;
     private RelativeLayout relativeLayout1;// 容器包含项目

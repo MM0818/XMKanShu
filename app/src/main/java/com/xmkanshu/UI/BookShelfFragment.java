@@ -22,13 +22,7 @@ import com.xmkanshu.greendao.model.Bookinfodb;
 
 import java.util.List;
 
-/**
- * @author ZQZESS
- * @date 12/8/2020-9:39 PM
- * @file BookShelfFragment.java
- * GitHub：https://github.com/zqzess
- *不会停止运行的app不是好app w(ﾟДﾟ)w
- */
+
 public class BookShelfFragment extends Fragment {
     TextView tv_search;
     private DaoHelper mDb;
