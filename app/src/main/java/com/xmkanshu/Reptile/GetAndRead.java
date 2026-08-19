@@ -19,7 +19,12 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,6 +42,7 @@ public class GetAndRead {
         ArrayList<Chapter> chapterList = new ArrayList<>();
         try {
             Log.d("GetChapter", "原始URL: " + url);
+            
             // 清洗URL：去掉重复的域名、多余的/等
             String cleanUrl;
             if (url.startsWith("http")) {
@@ -46,26 +52,32 @@ public class GetAndRead {
             } else {
                 cleanUrl = "https://www.uuubqg.cc/" + url;
             }
+            
             // 处理重复域名的情况（关键修复）
-            cleanUrl = cleanUrl.replaceAll("https?://www.uuubqg.cchttps?://", "https://");
+            //cleanUrl = cleanUrl.replaceAll("https?://www.uuubqg.cchttps?://", "https://");
             cleanUrl = cleanUrl.replaceAll("https?://www.uuubqg.cc/https?://", "https://");
             Log.d("GetChapter", "清洗后URL: " + cleanUrl);
 
-            alldoc = Jsoup.connect(cleanUrl)
+            //=========一、网络爬虫技术=================================================================================
+            // 1、连接、解析HTML后获取文档=================================================================================
+            alldoc = Jsoup.connect(cleanUrl)  //设置User-Agent模拟浏览器
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36")
-                    .timeout(10000)
+                    .timeout(10000)  //设置超时时间10秒避免网络阻塞
                     .get();
 
             // 查找正文卷标签（严格按要求）
-            Element mainContentDt = alldoc.selectFirst("div.listmain dl dt:contains(正文卷)");
+            Element mainContentDt = alldoc.selectFirst("div.listmain dl dt:contains(正文卷)");  //2、CSS选择器定位元素=============
             if (mainContentDt != null) {
                 Log.d("GetChapter", "找到正文卷标签，开始解析章节");
+                //父子/兄弟节点遍历
                 Elements siblings = mainContentDt.nextElementSiblings();
                 for (Element sibling : siblings) {
+                    //内容过滤与提取
                     if (sibling.tagName().equals("dt")) {
                         Log.d("GetChapter", "遇到其他DT标签，停止解析正文卷: " + sibling.text());
                         break;
                     }
+
                     if (sibling.tagName().equals("dd")) {
                         Element aTag = sibling.selectFirst("a");
                         if (aTag != null) {
@@ -90,11 +102,13 @@ public class GetAndRead {
         } catch (Exception e) {
             Log.e("GetChapter", "章节解析失败: " + e.getMessage(), e); // 打印完整堆栈
         }
+
         GlobalConfig.list = chapterList;
         return chapterList;
     }
 
-    // GetAndRead.java - 修改ReadingBackground方法
+    //=======二、多线程处理=================================================================================
+    // 1、后台线程预加载下几章的内容=================================================================================
     public static void ReadingBackground(final int chapternow)
     {
         Thread thread1 = new Thread(new Runnable() {
@@ -107,7 +121,13 @@ public class GetAndRead {
                     if (tmpcount >= 0 && tmpcount < GlobalConfig.list.size()) {
                         try {
                             Chapter chapter = GlobalConfig.list.get(tmpcount);
+                            
+                            //===三、缓存机制=================================================================================
+                            //1、内容缓存：在ReadPresenter-LoadChapterContent方法中实现=================================================================================
+                            //缓存命中时，预下载28页内容，预下载成功存在缓存里，即使没网也能看完这28页，好处：减少网络请求，提高阅读体验和响应速度，支持离线阅读
+                            // 缓存未命中时，触发网络请求获取内容
                             BookContentCache.getCache(chapter.getUrl());
+                        
                         } catch (Exception e) {
                             Log.e("GetAndRead", "预加载章节" + tmpcount + "失败: " + e.getMessage());
                         }
@@ -120,6 +140,12 @@ public class GetAndRead {
 
 
     //章节内容爬取
+    /*
+        已经看过了这个网站测试过了，每一章的内容的url都是不同的，一章一个网页
+        比如：万相之王，书籍详情页（包括选章节目录）：https://www.uuubqg.cc/137_137159/
+        第一章url：https://www.uuubqg.cc/137_137159/601728481.html
+        第二章url：https://www.uuubqg.cc/137_137159/601678492.html
+    */
     public static String GetBookContent(String url) {
         Document alldoc;
         String content = "";
@@ -133,6 +159,7 @@ public class GetAndRead {
             Element contentElement = alldoc.selectFirst("div#content, div.showtxt, div.chapter-content");
             if (contentElement != null) {
                 contentElement.select("script, style, div.ad, span.ad").remove(); // 移除广告和脚本
+                // 内容过滤与格式化
                 content = contentElement.text()
                         .replace("　　", "\n  ")
                         .replace("\n\n", "\n")
@@ -151,6 +178,8 @@ public class GetAndRead {
         return content;
     }
 
+    //==四、文本处理与渲染=================================================================================
+    //1、内容分段=====================================================================================
     public String splitContentFirst(String stringcontent)
     {
         /*
@@ -160,72 +189,83 @@ public class GetAndRead {
         {
             stringcontent="错误！可能原因：\n1.网络错误，笔趣阁网络连接超时或您的网络错误，请刷新重试\n2.内容错误，该书不存在内容，笔趣阁网站部分书籍没有内容，请等待新书源\n3.链接错误，笔趣阁已更换该书籍内容链接，请提交反馈";
         }
+
         int count = stringcontent.length();
-        int istart = 0;
-        String tmp2=stringcontent.substring(1,2);
+        int istart = 0;  //当前遍历到的字符的索引
+        String tmp2=stringcontent.substring(1,2);  //取索引之间的字符串，不包括结果索引，这里是取索引为1的字符
         String tmp=" ";
-        String contentstring="";
+        String contentstring="";  //这是用来拼接字符内容的
+
+        //文本分段算法
         for(int i=1;i<=count;i++)
         {
-            if(i!=count)
+            if(i!=count)  //遍历字符串，遇到空格和换行符，就将其替换为固定格式
             {
-                String nowWord=stringcontent.substring(istart,i);
-                String nextWord=stringcontent.substring(i,i+1);
-                if(nowWord.equals("　")&&nextWord.equals("　"))
+                String nowWord=stringcontent.substring(istart,i);  //当前遍历到的字符（索引istart到i之间的字符串，不包括i）
+                String nextWord=stringcontent.substring(i,i+1);  //下一个字符（索引为i的字符）
+
+                if(nowWord.equals("　") && nextWord.equals("　"))  //如果当前字符和下一个字符都是空格，就替换为固定格式
                 {
-                    contentstring+="    "+"  ";
+                    contentstring+="    "+"  ";  //段首，即四个英文空格（模仿中文排版的每段起点空两格，两个全角空格）+两个英文空格（字符间距是2）
                     istart=i+1;
                 }
-                else if(nowWord.equals(tmp)&&nextWord.equals(tmp2))
+                else if(nowWord.equals(tmp)&&nextWord.equals(tmp2))  //如果当前字符和下一个字符都是换行符，就替换为固定格式
                 {
-                    contentstring+="\n          \n"+" "+" ";
+                    contentstring+="\n          \n"+" "+" ";  //这个格式空格垫高段落间距，视觉上分段更清晰
                     istart=i+1;
 //                        mRealLine++;
                 }
                 else
                 {
-                    contentstring+=(stringcontent.substring(istart,i));
+                    contentstring+=(stringcontent.substring(istart,i)); //正常字符就直接拼接进来
                     istart=i;
                 }
             }else
             {
-                contentstring+=stringcontent.substring(i-1,i);
+                contentstring+=stringcontent.substring(i-1,i);  //拼完最后一个字符，索引为i-1
             }
         }
-        return contentstring;
+        return contentstring;  //返回分段好的字符串
     }
 
-    public void PageSet(String content, int mPageLineNum, ConcurrentHashMap contentMap)
+    //四、3.章节分页======================================================================================
+    public void PageSet(String content, int mPageLineNum, ConcurrentHashMap contentMap)  //ConcurrentHashMap线程安全存储
     {
         /*
          *单章节分页,并将内容存入Hashmap
          */
-        String[] arrtmp=content.split("\n");
+        String[] arrtmp=content.split("\n");  //行文字数组
         String contenttmp="";
         int tmpcount=0;//单页行数
         int Pagecount=1;//单章页数
+        
         try{
             //contentMap.put(0,GlobalConfig.list.get(GlobalConfig.chapternow).get("title"));
 
             Chapter currentChapter = GlobalConfig.list.get(GlobalConfig.chapternow);
+
+            //章节标题与内容分离
             contentMap.put(0, currentChapter.getTitle()); // 用 getTitle() 获取章节标题
         }catch (IndexOutOfBoundsException e)
         {
             e.printStackTrace();
         }
+
+        //基于屏幕高度的分页算法
         for(int i=0;i<arrtmp.length;i++)
         {
-            contenttmp+=arrtmp[i]+"\n";
+            contenttmp+=arrtmp[i]+"\n";  //一行一行的存该页内容
             tmpcount++;
-            if(tmpcount==mPageLineNum)
+            if(tmpcount==mPageLineNum)  //直到到达一页的最大文字行数时，分好一页内容
             {
-                contentMap.put(Pagecount,contenttmp);
+                contentMap.put(Pagecount,contenttmp);  //存当前页数，以及页内容进哈希
                 Pagecount++;
                 tmpcount=0;
                 contenttmp="";
             }
         }
-        if(!contenttmp.isEmpty())
+
+        if(!contenttmp.isEmpty())  //处理某一页的内容不够最大行数的情况，一般是本章的最后一页
         {
             contentMap.put(Pagecount,contenttmp);
             Pagecount++;
@@ -233,14 +273,14 @@ public class GetAndRead {
         /*
          *如果章节过短
          */
-        if(Pagecount==0)
+        if(Pagecount==0)  //只有一页内容，而且该页内容还没有到达最大行数
         {
             contentMap.put(1,contenttmp);
             GlobalConfig.PageTotal=1;
-        }else if(Pagecount==1)
+        }else if(Pagecount==1)  //只有一页内容，且该页内容已经到达最大行数
         {
             contentMap.put(1,contenttmp);
-            GlobalConfig.PageTotal=2;
+            GlobalConfig.PageTotal=2;  //强制设为2页
             Pagecount=2;
         }else
         {
@@ -249,29 +289,35 @@ public class GetAndRead {
 
     }
 
+    //四、2.自动换行计算=====================================================================================           
     public String splitcontentSecond(String content,int FontSize,int measuredWidth)
     {
         /*
          *段落添加分隔符,自动换行
          */
-        String[] arrtmp=content.split("\n");
-        TextPaint textPaint2 = new TextPaint ( );
-        String returntmp="";
+        String[] arrtmp=content.split("\n");  //利用文本按换行符将文本分割为段落数组
+        TextPaint textPaint2 = new TextPaint ( );  //创建一个文本画笔，用于测量文本宽度，这个类里的方法可以算字符串宽度！！（横向）这是和FontMetrics类（单个字体、纵向）的区别噢
+        String returntmp="";  //返回的字符串，用于存储自动换行后的文本
+
+        //一段一段的动态换行处理
         for(int i=0;i<arrtmp.length;i++)
         {
             if(!arrtmp[i].isEmpty())
             {
                 int start=0;
-                for(int j=0;j<arrtmp[i].length();j++)
+                //遍历一个段落中的每个字符，判断是否需要换行
+                for(int j=0;j<arrtmp[i].length();j++)  //处理每一段文本，arrtmp代表的是一段文字的分组哈
                 {
                     textPaint2.setTextSize(FontSize);
-                    float textwidth=textPaint2.measureText(arrtmp[i].substring(start,j));
+                    float textwidth=textPaint2.measureText(arrtmp[i].substring(start,j));   //利用measureText方法算出当前遍历字符串宽度
+
+                    //判断当前子字符串是否超过了测量宽度（如果超过，就换行），自适应屏幕尺寸
                     if(textwidth>=measuredWidth-FontSize)
                     {
-                        arrtmp[i]=arrtmp[i].substring(0,j)+"\n"+arrtmp[i].substring(j);
+                        arrtmp[i]=arrtmp[i].substring(0,j)+"\n"+arrtmp[i].substring(j);  //利用字符串这个按索引分割方法来拼接字符，中间插入换行符
                         start=j;
                     }
-                    textPaint2.reset();
+                    textPaint2.reset();  //把 TextPaint 对象的所有属性恢复成默认值，方便复用
                 }
             }
             if(returntmp.isEmpty())

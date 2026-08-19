@@ -46,7 +46,7 @@ public class GlobalConfig {
     // 原错误定义（存储 ConcurrentHashMap）：
     // public static ArrayList<ConcurrentHashMap<String, String>> list = new ArrayList<>();
 
-    // 修正后（存储 Chapter 对象）：
+    // 修正后（存储 Chapter 对象）：章节对象，用数组来存，章节数据结构有章节标题以及章节url
     public static ArrayList<Chapter> list = new ArrayList<>(); // 泛型改为 Chapter
 //    public static Map<String,BookChapter> bookchapter=new HashMap<String,BookChapter>();
     public static List<Bookinfodb> booklist;
@@ -85,23 +85,57 @@ public class GlobalConfig {
         android.provider.Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS, brightness);
         resolver.notifyChange(uri, null);
     }
+
+    //SharedPreferences持久化存储阅读进度保存
+    /*
+        - 持久化存储，应用退出后不丢失
+        - 每本书独立的 SharedPreferences 文件
+        - 下次打开自动恢复阅读进度
+        存储结构：
+            比如某本书的bookUrl："https://www.uuubqg.cc/book/12345.html"，万相之王的是：https://www.uuubqg.cc/137_137159/
+            存储文件名：137_137159（去掉斜杠了）
+            <Page, 10>   
+            <PageTotal, 10>
+            <chapternow, 5>
+    */
     public static void SaveReadSetting(Context context)
     {
+        // 获取"记事本"，文件名是书的 URL 去掉斜杠（保证每本书一个文件），生命周期：换书就换文件
+        // 比如 BookUrl="/book/123/" → 文件名变成 "book123"
+        //两个参数，第一个是文件名：每本书不同，第二个是模式：只有本APP能读
         SharedPreferences sp=context.getSharedPreferences(BookUrl.replace("/",""),MODE_PRIVATE);
+        
+        // 1. Editor 是定义在 SharedPreferences 内部的接口
+        //外部类.内部类：职责分离，比如外部类负责随时读，内部类负责批量写
+        //打开编辑模式（拿出笔准备写）
         SharedPreferences.Editor edit = sp.edit();
-        edit.putInt("Page",Page);
-        edit.putInt("PageTotal",PageTotal);
-        edit.putInt("chapternow",chapternow);
+
+        // 写三行数据（键 → 值）
+        edit.putInt("Page",Page);  //当前所在页= 第几页
+        edit.putInt("PageTotal",PageTotal);  //当前章节总页数
+        edit.putInt("chapternow",chapternow);  //当前章节数
+        
+        //同步立即写（有返回值 true/false）
         edit.commit();
     }
 
+    //SharedPreferences持久化存储阅读进度恢复
+    /*
+        - 从每本书的 SharedPreferences 文件中读取保存的阅读进度
+        - 如果文件不存在或数据损坏，提供默认值
+    */
     public static void GetReadSetting(Context context)
     {
+        // 打开同一本"记事本"（文件名必须和保存时一样）
         SharedPreferences sp=context.getSharedPreferences(BookUrl.replace("/",""),MODE_PRIVATE);
+        
+        // 读数据：getInt("键", 默认值)
+        // 如果文件不存在或键找不到，就用后面的默认值
         Page=sp.getInt("Page",0);
         PageTotal=sp.getInt("PageTotal",1);
         chapternow=sp.getInt("chapternow",0);
     }
+
     // 在 GlobalConfig 类中修改 PicLinkCheck 方法
     public static String PicLinkCheck(String piclink) {
         // 添加空值检查

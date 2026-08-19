@@ -160,47 +160,54 @@ public class BookCityTopFragment extends Fragment {
     private void setupRecyclerViewTouchListener(RecyclerView recyclerView) {
         if (recyclerView == null) return;
 
-        recyclerView.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
+        //1、注册触摸监听：在RecyclerView自己处理之前，先判断要不要交给父View
+        recyclerView.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() { //在事件传给RecyclerView的子Item之前，先截获处理
             private float startY;
 
+            //拦截判断
             @Override
             public boolean onInterceptTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {
                 switch (e.getAction()) {
+                    //2. 记录起点 + 初始禁止父 View 拦截
+                    //ACTION_DOWN 时默认禁止父 View 拦截，保证 RecyclerView 能优先获得滑动权。
                     case MotionEvent.ACTION_DOWN:
-                        startY = e.getY();
-                        // 开始触摸时，告诉父View不要拦截
+                        startY = e.getY();  //记录手指按下的位置（起点）
+
+                        // 关键：开始触摸时，告诉父View不要拦截
                         rv.getParent().requestDisallowInterceptTouchEvent(true);
                         break;
 
+                    //3.移动时判断能不能滚动
                     case MotionEvent.ACTION_MOVE:
                         float currentY = e.getY();
-                        float deltaY = currentY - startY;
+                        float deltaY = currentY - startY;  //手指滑动了多少
 
-                        // 检查RecyclerView是否可以滚动
-                        boolean canScrollUp = rv.canScrollVertically(-1);
-                        boolean canScrollDown = rv.canScrollVertically(1);
+                        // 检查RecyclerView还能不能往上下滚 -> 能：位于中间，让RecyclerV滚动 ；不能：位于顶端，检查是否上下拉，是就让NextedScollView滚动
+                        boolean canScrollUp = rv.canScrollVertically(-1);  //-1 = 往上滚
+                        boolean canScrollDown = rv.canScrollVertically(1);  //1 = 往下滚
 
-                        // 如果是垂直滑动
-                        if (Math.abs(deltaY) > 10) {
-                            // 滑动到顶部并且向下滑动
+                        // 4.关键判断：到底哪个View处理这个滑动事件？
+                        if (Math.abs(deltaY) > 10) {  //垂直滑动距离超过10px，才认为是滑动（防误触）
+                            // 情况1：滑动到顶部并且向下滑动
                             if (!canScrollUp && deltaY > 0) {
                                 // 允许父View拦截，让NestedScrollView处理
+                                //下面这行代码是只管发信号，系统管执行动作。即NestedScrollView 是系统类，滚动逻辑 Google 写好了。RView也是哈。
                                 rv.getParent().requestDisallowInterceptTouchEvent(false);
                             }
-                            // 滑动到底部并且向上滑动
+                            // 情况2：滑动到底部并且向上滑动
                             else if (!canScrollDown && deltaY < 0) {
                                 // 允许父View拦截，让NestedScrollView处理
                                 rv.getParent().requestDisallowInterceptTouchEvent(false);
                             }
-                            // 在中间区域滑动
+                            // 情况3：在中间区域滑动
                             else {
-                                // RecyclerView自己处理
+                                // RecyclerView自己处理，我继续，父类别抢
                                 rv.getParent().requestDisallowInterceptTouchEvent(true);
                             }
                         }
                         break;
                 }
-                return false;
+                return false;  //返回false，不拦截事件
             }
 
             @Override

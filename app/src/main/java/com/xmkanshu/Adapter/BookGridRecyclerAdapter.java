@@ -58,6 +58,7 @@ public class BookGridRecyclerAdapter extends RecyclerView.Adapter<BookGridRecycl
         return defaultBitmap;
     }
 
+    //视图创建 ： onCreateViewHolder 创建新的 ViewHolder
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -66,6 +67,7 @@ public class BookGridRecyclerAdapter extends RecyclerView.Adapter<BookGridRecycl
         return new ViewHolder(view);
     }
 
+    //数据绑定 ： onBindViewHolder 将数据绑定到已有 ViewHolder
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         HashMap<String, String> book = list.get(position);
@@ -77,11 +79,11 @@ public class BookGridRecyclerAdapter extends RecyclerView.Adapter<BookGridRecycl
         // 替换原来的ImageCacheManager.loadImage逻辑
         String piclink = book.get("piclink");
         if (piclink != null && !piclink.isEmpty()) {
-            Glide.with(context)
-                    .load(piclink)
-                    .placeholder(R.drawable.nonepic)
-                    .error(R.drawable.nonepic)
-                    .into(holder.ivCover);
+            Glide.with(context) //创建 Glide 实例，绑定上下文
+                    .load(piclink)  //加载网络图片（支持url、资源ID等等）
+                    .placeholder(R.drawable.nonepic)  //加载占位图（加载完成前显示）
+                    .error(R.drawable.nonepic)  //加载失败图（加载失败显示）
+                    .into(holder.ivCover);      //将图片加载在ImageView中    
         } else {
             holder.ivCover.setImageResource(R.drawable.nonepic);
         }
@@ -94,11 +96,13 @@ public class BookGridRecyclerAdapter extends RecyclerView.Adapter<BookGridRecycl
         });
     }
 
+    //数量计算 ： getItemCount 返回数据集大小
     @Override
     public int getItemCount() {
         return list.size();
     }
 
+    //- 组件绑定 ：通过 findViewById 绑定 UI 组件
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView ivCover;
         TextView tvTitle;

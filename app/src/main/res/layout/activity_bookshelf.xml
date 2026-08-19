@@ -35,7 +35,8 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:gravity="center"
-                android:background="@drawable/ic_action_add_icon"/>
+                android:background="@drawable/ic_action_add_icon"
+                android:id="@+id/tv_bookshelf_import"/>
         </LinearLayout>
     </LinearLayout>
     <LinearLayout

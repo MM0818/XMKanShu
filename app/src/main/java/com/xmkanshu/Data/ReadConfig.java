@@ -21,9 +21,12 @@ public class ReadConfig {
 
     public static void SaveSetting(Context context)
     {
+        // 文件名固定叫 "setting"（所有书共用这一个文件），生命周期：一直存在除非卸载app
         SharedPreferences sp=context.getSharedPreferences("setting",MODE_PRIVATE);
         SharedPreferences.Editor edit = sp.edit();
-        edit.putInt("Fontsize",FontSize);
+       
+        // 存各种设置开关
+        edit.putInt("Fontsize",FontSize);  //字体大小
         edit.putInt("bgColor",bgColor);
         edit.putInt("fontcolor",fontColor);
         edit.putBoolean("isDownload",isDownload);
@@ -32,12 +35,14 @@ public class ReadConfig {
         edit.putBoolean("isFavourite",isFavourite);
         edit.putBoolean("isSydLight",isSydLight);
         edit.putInt("appLight",appLight);
+        
         edit.commit();
     }
 
     public static void ReadSetting(Context context)
     {
         SharedPreferences sp=context.getSharedPreferences("setting",MODE_PRIVATE);
+        
         FontSize=sp.getInt("Fontsize",62);
         bgColor=sp.getInt("bgColor",R.color.default_read_color);
         fontColor=sp.getInt("fontcolor", R.color.default_font_color);

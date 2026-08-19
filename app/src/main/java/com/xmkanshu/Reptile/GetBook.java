@@ -17,28 +17,47 @@ import java.util.HashMap;
 public class GetBook {
     private static final String TAG = "GetBook"; // 新增TAG常量
 
+    //五、功能模块=====================================================================================================
+    //1.封面推荐===================================================================================================
+    /*
+        定位首页推荐区域的HTML元素
+        1.使用Jsoup库连接目标URL（如：http://www.uuubqg.cc/）
+        2.通过CSS选择器（如：.item）定位推荐书籍的HTML元素
+        3.遍历每个元素，提取书籍名称、作者、封面图片等信息
+        4.将提取到的信息存储到HashMap中
+        5.将每个HashMap添加到ArrayList中
+        6.返回包含所有推荐书籍信息的ArrayList
+    */
     public static ArrayList fengtui() {
         ArrayList<HashMap<String, String>> list;
         Document alldoc;
         String link;//书链接
         list = new ArrayList<HashMap<String, String>>();
+
         try {
+            //==一、网络爬虫技术===============================================================================
+            //1.Jsoup库的使用
             alldoc = Jsoup.connect("http://www.uuubqg.cc/")
-                    .data("query", "Java")
+                    .data("query", "Java")  //通过CSS选择器定位HTML元素
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36")
-                    .get();
-            Elements listClass = alldoc.getElementsByAttributeValue("class", "item");
+                    .get();  //支持HTTP GET请求获取页面内容
+
+            //2.HTML元素解析
+            Elements listClass = alldoc.getElementsByAttributeValue("class", "item");  //通过class属性值获取元素
             for (Element listitem : listClass) {
                 HashMap<String, String> book = new HashMap<String, String>();
 
                 try {
-                    link = listitem.getElementsByTag("a").attr("href");//获取书籍link
+                    //link 就是 <a href="..."> 里的地址，即“书源详情页相对地址”，后面要拿它拼成完整 URL 再去抓章节列表
+                    link = listitem.getElementsByTag("a").attr("href");//获取书籍link（href属性值）
                 } catch (Exception e) {
                     link = "";
                 }
 
+                //==二、缓存机制======================================================================================
+                //1.书籍信息缓存=====================================================================================
                 String id = link.replace("/", "");
-                final BookInfo bookInfo = BookInfoCache.loadBook(id);
+                final BookInfo bookInfo = BookInfoCache.loadBook(id);  //本地缓存书籍信息，减少重复网络请求，提高响应速度，支持离线访问已缓存的书籍信息
 
                 book.put("name", bookInfo.getName());
                 book.put("author", bookInfo.getAuthor());
@@ -70,6 +89,16 @@ public class GetBook {
         return list;
     }
 
+    //五、2.强力推荐==========================================================================================
+    /*
+        定位首页强力推荐区域的HTML元素（与封面推荐类似的处理逻辑，代码复用）
+        1.使用Jsoup库连接目标URL（如：http://www.uuubqg.cc/）
+        2.通过CSS选择器（如：#hotcontent > div.r > ul:nth-child(4) > li）定位推荐书籍的HTML元素
+        3.遍历每个元素，提取书籍名称、作者、封面图片等信息
+        4.将提取到的信息存储到HashMap中
+        5.将每个HashMap添加到ArrayList中
+        6.返回包含所有强力推荐书籍信息的ArrayList
+    */
     public static ArrayList qiangtui() {
         Document alldoc;
         final ArrayList<HashMap<String, String>> list;
@@ -79,10 +108,13 @@ public class GetBook {
                     .data("query", "Java")
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36")
                     .get();
+
             Elements listClass = alldoc.select("#hotcontent > div.r > ul:nth-child(4) > li");
             for (Element listitem : listClass) {
                 final String url = listitem.getElementsByTag("a").attr("href");//获取书籍link
-                final String id = url.replace("/", "");
+                //二、2.缓存键生成================================================================================
+                //简单高效的缓存键生成策略，确保缓存键的唯一性，便于后续查找和管理缓存
+                final String id = url.replace("/", "");  // 将 URL 转换为缓存键
                 final BookInfo bookInfo = BookInfoCache.loadBook(id);
 
                 HashMap<String, String> book = new HashMap<String, String>();
@@ -116,6 +148,7 @@ public class GetBook {
         return list;
     }
 
+    //五、3.最新入库=================================================================================================
     public static ArrayList ruku() {
         Document alldoc;
         ArrayList<HashMap<String, String>> list;
@@ -125,6 +158,7 @@ public class GetBook {
                     .data("query", "Java")
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36")
                     .get();
+
             Elements listClass = alldoc.select("#newscontent > div.r > ul > li");
             for (Element listitem : listClass) {
                 HashMap<String, String> book = new HashMap<String, String>();
@@ -162,6 +196,17 @@ public class GetBook {
         return list;
     }
 
+    //五、4.书籍详情获取================================================================================================
+    /*
+        定位书籍详情区域的HTML元素（与封面推荐类似的处理逻辑，代码复用），主要是使用CSS选择器一个一个的找标签定位元素。分别存对应变量里后，再做参数全传进BookInfo对象里存储。
+        1.书名：#info h1
+        2.作者：#info p:contains(作者)
+        3.封面图片：#fmimg img
+        4.书籍介绍：#intro p
+        5.最新更新时间：#info p:contains(最新更新时间)
+        6.最新章节：#info p:contains(最新章节)
+        7.章节数：#info p:contains(章节数)
+    */
     public static BookInfo GetBookInfo(String id) {
         Log.d(TAG, "开始获取书籍信息，ID参数: " + id);
 
@@ -175,9 +220,14 @@ public class GetBook {
         String newchapterlink = "";
         int chapternum = 0;
 
+        //一、3.URL处理与清洗
         try {
+            //正则表达式处理URL格式
+            //正则目的：不管 link 是完整 URL 还是相对路径，最后都变成同一套干净格式，方便缓存、拼接、去重。
+            //下面的逻辑就是一句话：“脱头去尾，斜杠变下划线”，如https://www.uuubqg.cc//book//12345// -> book_12345
             String cleanId = id.replaceAll("https?://[^/]+", "").replaceAll("/+", "_").replaceAll("^_+", "").replaceAll("_+$", "");
             String fullUrl;
+
             if (cleanId.contains("_")) {
                 fullUrl = "https://www.uuubqg.cc/" + cleanId + "/";
             } else {
@@ -198,10 +248,14 @@ public class GetBook {
                 Log.w(TAG, "书名元素未找到");
             }
 
-            Element authorElement = alldoc.selectFirst("#info p:contains(作)");
+            //==四、数据处理与转换====================================================================================
+            //1.数据提取与清洗=======================================================================================
+            Element authorElement = alldoc.selectFirst("#info p:contains(作)");  //CSS选择器精确定位目标元素
             if (authorElement != null) {
+                //文本清洗，去除多余的空格和前缀
                 String authorText = authorElement.text().trim();
-                author = authorText.replaceAll("作\\s*者[:：]\\s*", "").trim();
+                //第一个参数——正则表达式参数的意思：\\s* 代表 0 个或多个空白（空格、Tab、换行）。[:：] 代表 匹配英文冒号: 或中文全角冒号：（括号里任选一个）
+                author = authorText.replaceAll("作\\s*者[:：]\\s*", "").trim();  
                 Log.d(TAG, "获取作者成功: " + author);
             } else {
                 Log.w(TAG, "作者元素未找到");
@@ -271,11 +325,19 @@ public class GetBook {
             Log.e(TAG, "获取书籍信息失败: " + e.getMessage(), e);
         }
 
+        //四、2.数据结构构建========================================================================================
+        //获取到的最新入库时间、简历、作者等等这些信息都一起给BookInfo对象存起来了
         BookInfo book = new BookInfo(name, author, id, picname, piclink, info, lasttime, newchapter, newchapterlink, chapternum);
         Log.d(TAG, "书籍信息对象创建完成: " + book.getName());
         return book;
     }
 
+    //五、5.章节列表获取================================================================================================
+    /*
+        - 定位正文卷区域，过滤其他章节
+        - 批量处理章节链接和标题
+        - 构建章节列表数据结构
+    */
     public static ArrayList<HashMap<String, String>> getChaptersFromMainContent(String bookId) {
         ArrayList<HashMap<String, String>> chapterList = new ArrayList<>();
         try {
@@ -291,7 +353,7 @@ public class GetBook {
             Elements allListElements = alldoc.select("#listmain dl > *");
             boolean isMainContent = false;
             for (Element el : allListElements) {
-                if (el.tagName().equals("dt")) {
+                if (el.tagName().equals("dt")) { // 定位章节标题
                     if (el.text().contains("正文卷")) {
                         isMainContent = true;
                         continue;
@@ -300,12 +362,14 @@ public class GetBook {
                         continue;
                     }
                 }
-                if (el.tagName().equals("dd") && isMainContent) {
+
+                if (el.tagName().equals("dd") && isMainContent) {  // 定位章节链接
                     Element aTag = el.selectFirst("a");
                     if (aTag != null) {
                         HashMap<String, String> chapter = new HashMap<>();
                         chapter.put("title", aTag.text().trim());
                         String chapterUrl = aTag.attr("href");
+                        
                         if (chapterUrl.startsWith("/")) {
                             chapterUrl = "https://www.uuubqg.cc" + chapterUrl;
                         }
