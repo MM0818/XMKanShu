@@ -14,11 +14,12 @@ import com.xmkanshu.Data.GlobalConfig;
 import com.xmkanshu.Data.ReadConfig;
 import com.xmkanshu.R;
 import com.xmkanshu.UI.ReadingActivity;
+import com.xmkanshu.ViewModel.ReadViewModel;
 
 
 public class DialogCreater {
     public static Dialog createReadSetting(final ReadingActivity readingActivity,
-                                           final ReadPresenter readPresenter,
+                                           final ReadViewModel readViewModel,
                                            View.OnClickListener settingListener,
                                            View.OnClickListener chapterListListener,
                                            View.OnClickListener lastChapterListener,
@@ -67,14 +68,14 @@ public class DialogCreater {
                     ReadConfig.isDark=false;
                     iv_isDrak.setImageResource(R.mipmap.darkmoon);
                     tv_isDrak.setText("夜间");
-                    readPresenter.DayAndNightChange(0);
+                    readViewModel.toggleDayNight(0);
                     ReadConfig.SaveSetting(readingActivity);//保存设置
                 }else
                 {
                     ReadConfig.isDark=true;
                     iv_isDrak.setImageResource(R.mipmap.daylight);
                     tv_isDrak.setText("白天");
-                    readPresenter.DayAndNightChange(1);
+                    readViewModel.toggleDayNight(1);
                     ReadConfig.SaveSetting(readingActivity);//保存设置
                 }
             }
@@ -96,7 +97,8 @@ public class DialogCreater {
 
         //章节跳转
         SeekBar sbChapterProgress = (SeekBar) view.findViewById(R.id.sb_read_chapter_progress);
-        sbChapterProgress.setProgress(GlobalConfig.chapternow*100/(GlobalConfig.list.size()-1));
+        int maxChapter = GlobalConfig.list.size() > 1 ? GlobalConfig.list.size() - 1 : 1;
+        sbChapterProgress.setProgress(GlobalConfig.chapternow * 100 / maxChapter);
         sbChapterProgress.setOnSeekBarChangeListener(onSeekBarChangeListener);
 
         dialog.setCancelable(true);
@@ -105,7 +107,7 @@ public class DialogCreater {
         return dialog;
     }
 
-    public static Dialog createReadDetailSetting(final ReadingActivity readingActivity,final ReadPresenter readPresenter)
+    public static Dialog createReadDetailSetting(final ReadingActivity readingActivity,final ReadViewModel readViewModel)
     {
         /*
          *详细设置
@@ -138,12 +140,7 @@ public class DialogCreater {
                     int tmpcount= Integer.parseInt(tmp);
                     tvSize.setText(String.valueOf(tmpcount-1));
                     ReadConfig.FontSize-=3;
-                    readPresenter.LoadChapterContent();
-                    if(GlobalConfig.Page+1>=GlobalConfig.PageTotal)
-                    {//如何字体变小前页码大于变小后总页码
-                        GlobalConfig.Page=GlobalConfig.PageTotal-1;
-                    }
-                    readingActivity.tv_read.setImageBitmap(readPresenter.changePageContent(GlobalConfig.Page));
+                    readViewModel.reloadWithNewFontSize();
                     ReadConfig.SaveSetting(readingActivity);//保存设置
                 }
             }
@@ -158,8 +155,7 @@ public class DialogCreater {
                     int tmpcount= Integer.parseInt(tmp);
                     tvSize.setText(String.valueOf(tmpcount+1));
                     ReadConfig.FontSize+=3;
-                    readPresenter.LoadChapterContent();
-                    readingActivity.tv_read.setImageBitmap(readPresenter.changePageContent(GlobalConfig.Page));
+                    readViewModel.reloadWithNewFontSize();
                     ReadConfig.SaveSetting(readingActivity);//保存设置
                 }
             }

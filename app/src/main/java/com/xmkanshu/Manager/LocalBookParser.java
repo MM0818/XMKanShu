@@ -16,12 +16,18 @@ import java.util.regex.Pattern;
  * 负责解析txt文件，自动识别章节
  */
 public class LocalBookParser {
-    // 常见章节格式的正则表达式
-    private static final String[] CHAPTER_PATTERNS = {
-            "第[0-9一二三四五六七八九十百千零壹贰叁肆伍陆柒捌玖拾佰仟]+[章节回卷集部篇][\\s\\S]*",
-            "Chapter\\s*[0-9]+[\\s\\S]*",
-            "CHAPTER\\s*[0-9]+[\\s\\S]*",
-            "\\d+[\\.、][\\s\\S]*"
+    // 章节解析结果缓存，避免重复读取整个文件
+    private static List<String> cachedLines;
+    private static List<Integer> cachedChapterStartLines;
+    private static String cachedFilePath;
+
+    // 常见章节格式的正则表达式（预编译，提升性能）
+    // 使用 find() 匹配行内子串，而非 matches() 全行匹配；兼容不可见字符和全角数字
+    private static final Pattern[] CHAPTER_PATTERN_COMPILED = {
+            Pattern.compile("第[0-9一二三四五六七八九十百千零壹贰叁肆伍陆柒捌玖拾佰仟０-９]+\\s*[章节回卷集部篇]"),
+            Pattern.compile("[Cc][Hh][Aa][Pp][Tt][Ee][Rr]\\s*[0-9]+"),
+            Pattern.compile("第\\s*[0-9０-９]+\\s*[章节回卷集部篇]"),
+            Pattern.compile("\\d+[\\.、]\\s*\\S")
     };
 
     /**
@@ -66,8 +72,18 @@ public class LocalBookParser {
                 // 如果没有找到章节，把整个文件作为一章
                 if (chapterStartLines.isEmpty()) {
                     chapters.add(new Chapter("全文", "local_chapter_0"));
+                    // 缓存：整本书作为一章
+                    cachedFilePath = filePath;
+                    cachedLines = lines;
+                    cachedChapterStartLines = new ArrayList<>();
+                    cachedChapterStartLines.add(0);
                     return chapters;
                 }
+
+                // 缓存解析结果，供 getChapterContent 复用
+                cachedFilePath = filePath;
+                cachedLines = lines;
+                cachedChapterStartLines = chapterStartLines;
 
                 // 创建章节对象
                 for (int i = 0; i < chapterStartLines.size(); i++) {
@@ -96,6 +112,13 @@ public class LocalBookParser {
      * @return 章节内容
      */
     public static String getChapterContent(String filePath, int chapterIndex) {
+        // 优先使用缓存的解析结果
+        if (cachedFilePath != null && cachedFilePath.equals(filePath)
+                && cachedLines != null && cachedChapterStartLines != null) {
+            return getChapterContentFromCache(chapterIndex);
+        }
+
+        // 缓存未命中，回退到全量读取（兼容直接调用 getChapterContent 而未先 parseChapters 的情况）
         File file = new File(filePath);
         if (!file.exists()) {
             return "";
@@ -153,15 +176,47 @@ public class LocalBookParser {
     }
 
     /**
+     * 从缓存中获取章节内容（避免重复读取文件）
+     */
+    private static String getChapterContentFromCache(int chapterIndex) {
+        if (chapterIndex < 0 || chapterIndex >= cachedChapterStartLines.size()) {
+            return "";
+        }
+
+        int startLine = cachedChapterStartLines.get(chapterIndex);
+        int endLine = (chapterIndex + 1 < cachedChapterStartLines.size()) ?
+                cachedChapterStartLines.get(chapterIndex + 1) : cachedLines.size();
+
+        StringBuilder content = new StringBuilder();
+        for (int i = startLine; i < endLine; i++) {
+            content.append(cachedLines.get(i)).append("\n");
+        }
+        return content.toString();
+    }
+
+    /**
+     * 清除缓存（切换书籍时调用）
+     */
+    public static void clearCache() {
+        cachedLines = null;
+        cachedChapterStartLines = null;
+        cachedFilePath = null;
+    }
+
+    /**
      * 判断一行是否是章节标题
      */
     private static boolean isChapterTitle(String line) {
-        if (line == null || line.isEmpty() || line.length() > 100) {
+        if (line == null || line.isEmpty() || line.length() > 200) {
             return false;
         }
 
-        for (String pattern : CHAPTER_PATTERNS) {
-            if (line.matches(pattern)) {
+        // 清理不可见字符（BOM、NBSP、零宽字符等），统一空格
+        String cleaned = line.replaceAll("[\\uFEFF\\u00A0\\u200B\\u200C\\u200D\\u2060\\u3000]", " ").trim();
+        if (cleaned.isEmpty()) return false;
+
+        for (Pattern pattern : CHAPTER_PATTERN_COMPILED) {
+            if (pattern.matcher(cleaned).find()) {
                 return true;
             }
         }

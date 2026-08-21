@@ -3,13 +3,13 @@ package com.xmkanshu.UI;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.lifecycle.ViewModelProvider;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
-import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.StrictMode;
@@ -20,17 +20,22 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 
+import androidx.core.view.GravityCompat;
+
 import com.hb.dialog.dialog.LoadingDialog;
+import com.xmkanshu.Adapter.ChapterAdapter;
 import com.xmkanshu.Data.GlobalConfig;
 import com.xmkanshu.Data.ReadConfig;
 import com.xmkanshu.Manager.LocalBookParser;
 import com.xmkanshu.Model.Chapter;
-import com.xmkanshu.Presente.ReadPresenter;
+import com.xmkanshu.Presente.DialogCreater;
 import com.xmkanshu.R;
 import com.xmkanshu.Reptile.GetAndRead;
 import com.xmkanshu.ViewUitl.BatteryView;
+import com.xmkanshu.ViewModel.ReadViewModel;
 
 import java.util.List;
 
@@ -50,7 +55,7 @@ public class ReadingActivity extends AppCompatActivity {
     Bitmap bitmap;
     Bitmap bitmap2;
     private BatteryView mBatteryView;
-    public ReadPresenter mReadPresenter;
+    private ReadViewModel readViewModel;
     LoadingDialog loadingDialog;
     private long openStartTime;  // 添加成员变量记录开始时间指标
 
@@ -72,7 +77,12 @@ public class ReadingActivity extends AppCompatActivity {
         loadingDialog=new LoadingDialog(this);
         findId();
 
-        new initReadTask().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);
+        // 初始化ViewModel
+        readViewModel = new ViewModelProvider(this).get(ReadViewModel.class);
+        observeViewModel();
+
+        // 使用协程替代AsyncTask
+        initBookWithCoroutines();
 
         //注册电量广播接收器以获取电量信息
         IntentFilter intentFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
@@ -97,32 +107,27 @@ public class ReadingActivity extends AppCompatActivity {
                              *本章末尾，切换章节标签，跳转下一章节
                              */
                             GlobalConfig.chapternow += 1;
-                            mReadPresenter.LoadChapterContent();
+                            readViewModel.loadChapterContent();
                             GlobalConfig.Page = 0;
                             if (!ReadConfig.isDownload) {
                                 GetAndRead.ReadingBackground(GlobalConfig.chapternow);
-//                                Log.d("isdownload","2");
                             }
                         }
                     }
 
                     Log.d("PageSet", "Page=" + GlobalConfig.Page + "Cahapter:" + GlobalConfig.chapternow);
-                    bitmap2 = mReadPresenter.changePageContent(GlobalConfig.Page);
+                    bitmap2 = readViewModel.changePageContent(GlobalConfig.Page);
                     GlobalConfig.SaveReadSetting(getApplicationContext());//保存阅读进度
                     tv_read.setImageBitmap(bitmap2);
 
-                    //探索上面的翻页流畅度性能！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
                     long duration = System.currentTimeMillis() - startTime;  // 计算耗时
                     Log.d("PagePerformance", "右翻页总耗时: " + duration + "ms, " + "章节: " + GlobalConfig.chapternow + ", 页码: " + GlobalConfig.Page);
 
                     try {
-                        //bitmap.recycle();  //老版本这样写会卡
                         bitmap = null;
-                        //System.gc();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-//                    Toast.makeText(getApplicationContext(), "右：X="+event.getX()+"Y="+event.getY(), Toast.LENGTH_SHORT).show();
                 }
                 /*
                  *左侧翻页
@@ -135,26 +140,23 @@ public class ReadingActivity extends AppCompatActivity {
                          *本章起始，切换章节标签，跳转上一章节
                          */
                         GlobalConfig.chapternow = GlobalConfig.chapternow - 1;
-                        mReadPresenter.LoadChapterContent();
+                        readViewModel.loadChapterContent();
                         GlobalConfig.Page = GlobalConfig.PageTotal - 1;
                     } else if (GlobalConfig.Page <= 0 && GlobalConfig.chapternow == 0) {
                         GlobalConfig.chapternow = 0;
-                        mReadPresenter.LoadChapterContent();
+                        readViewModel.loadChapterContent();
                         GlobalConfig.Page = 0;
                     }
                     Log.d("PageSet", "Page=" + GlobalConfig.Page + "Cahapter:" + GlobalConfig.chapternow);
-                    bitmap = mReadPresenter.changePageContent(GlobalConfig.Page);
+                    bitmap = readViewModel.changePageContent(GlobalConfig.Page);
                     GlobalConfig.SaveReadSetting(getApplicationContext());//保存阅读进度
                     tv_read.setImageBitmap(bitmap);
 
-                    //探索上面的翻页流畅度性能！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
                     long duration = System.currentTimeMillis() - startTime;  // 计算耗时
                     Log.d("PagePerformance", "左翻页总耗时: " + duration + "ms, " + "章节: " + GlobalConfig.chapternow + ", 页码: " + GlobalConfig.Page);
 
                     try {
-                        //bitmap2.recycle();  //老
                         bitmap2 = null;
-                        //System.gc();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -164,8 +166,7 @@ public class ReadingActivity extends AppCompatActivity {
                  *中央
                  */
                 if (isCenter) {
-                    mReadPresenter.showSettingView();
-//                    Toast.makeText(getApplicationContext(), "中：X="+event.getX()+"Y="+event.getY(), Toast.LENGTH_SHORT).show();
+                    showSettingView();
                 }
                 return false;
             }
@@ -174,11 +175,113 @@ public class ReadingActivity extends AppCompatActivity {
 
     }
 
+    /**
+     * 观察ViewModel的状态变化
+     */
+    private void observeViewModel() {
+        // 观察章节标题
+        readViewModel.getChapterTitle().observe(this, title -> {
+            if (tv_title != null) {
+                tv_title.setText(title);
+            }
+        });
+
+        // 观察阅读进度
+        readViewModel.getReadingProgress().observe(this, progress -> {
+            if (tv_foot != null) {
+                tv_foot.setText(progress);
+            }
+        });
+
+        // 观察页面Bitmap
+        readViewModel.getCurrentPageBitmap().observe(this, bitmap -> {
+            if (bitmap != null && tv_read != null) {
+                tv_read.setImageBitmap(bitmap);
+            }
+        });
+
+        // 观察日夜模式切换
+        readViewModel.getStyleChangedEvent().observe(this, isDark -> {
+            intStyle();
+        });
+    }
+
+    /**
+     * 使用协程初始化书籍（替代AsyncTask）
+     */
+    private void initBookWithCoroutines() {
+        openStartTime = System.currentTimeMillis();
+        Log.d("BookOpen", "开始加载书籍");
+
+        loadingDialog.setMessage("加载中...");
+        loadingDialog.setCancelable(true);
+        loadingDialog.setCanceledOnTouchOutside(false);
+        loadingDialog.show();
+
+        // 获取Intent中的书籍信息
+        Intent intent = getIntent();
+        String bookUrl = intent.getStringExtra("link");
+        int chapternum = intent.getIntExtra("chapternum", 0);
+
+        // 处理URL
+        String targetUrl;
+        if (bookUrl != null && (bookUrl.startsWith("/") || bookUrl.contains("com.xmkanshu"))) {
+            // 本地书籍
+            targetUrl = bookUrl;
+            GlobalConfig.BookUrl = bookUrl;
+        } else {
+            // 网络书籍
+            if (bookUrl != null) {
+                bookUrl = bookUrl.replaceAll("^/+", "");
+            } else {
+                bookUrl = "";
+            }
+            GlobalConfig.BookUrl = bookUrl;
+            targetUrl = "https://www.uuubqg.cc/" + bookUrl;
+        }
+
+        // 读取设置
+        ReadConfig.ReadSetting(this);
+
+        // 初始化章节列表（关键！）
+        Log.d("BookOpen", "initContent前: GlobalConfig.list.size=" + GlobalConfig.list.size());
+        initContent(targetUrl, chapternum);
+        Log.d("BookOpen", "initContent后: GlobalConfig.list.size=" + GlobalConfig.list.size() +
+                ", chapternow=" + GlobalConfig.chapternow +
+                ", measuredWidth=" + GlobalConfig.measuredWidth +
+                ", measuredHeigtt=" + GlobalConfig.measuredHeigtt);
+
+        // 使用ViewModel的协程加载章节内容
+        readViewModel.loadChapterContent();
+
+        // 观察加载状态
+        readViewModel.getChapterLoadState().observe(this, state -> {
+            if (state instanceof ReadViewModel.ChapterLoadState.Success) {
+                long totalDuration = System.currentTimeMillis() - openStartTime;
+                Log.d("BookOpen", "书籍加载完成，用户感知总耗时: " + totalDuration + "ms");
+
+                loadingDialog.dismiss();
+                intStyle();
+
+                // 绘制第一页
+                Bitmap firstPage = readViewModel.changePageContent(0);
+                if (firstPage != null && tv_read != null) {
+                    tv_read.setImageBitmap(firstPage);
+                }
+            } else if (state instanceof ReadViewModel.ChapterLoadState.Error) {
+                loadingDialog.dismiss();
+                Log.e("BookOpen", "加载失败: " + ((ReadViewModel.ChapterLoadState.Error) state).getMessage());
+            }
+        });
+    }
+
     public void intStyle() {
         int bgColor = resolveColor(ReadConfig.bgColor);
         int fontColor = resolveColor(ReadConfig.fontColor);
 
         layout_title.setBackgroundColor(bgColor);
+        layout_foot.setBackgroundColor(bgColor);
+        linearLayout.setBackgroundColor(bgColor);
 
         tv_title.setTextColor(fontColor);
         tv_foot.setTextColor(fontColor);
@@ -234,10 +337,13 @@ public class ReadingActivity extends AppCompatActivity {
     };
 
     public void initContent(String url, int chapternum) {
+        Log.d("BookOpen", "initContent开始: url=" + url + ", chapternum=" + chapternum);
+
         //初始化数据
         //根据屏幕尺寸调整布局参数：确保在不同尺寸的屏幕上都能正常显示
         GlobalConfig.measuredWidth = GlobalConfig.screenWidth;//控件列宽度
         GlobalConfig.measuredHeigtt = GlobalConfig.screenHeight;//控件高度
+        Log.d("BookOpen", "屏幕尺寸: screenWidth=" + GlobalConfig.screenWidth + ", screenHeight=" + GlobalConfig.screenHeight);
 
         //原来每本书的某章的分页内容全局变量都是点开这本书之后一次性分好页并存的，再点下一本的时候会被清理掉，因为手写了清理的代码
         // 除了某章的全部内容会生命周期和app的一样，因为有单独实现一个BookContentCache类，hashmap是static类型的，也就是全局唯一，整个应用共享一个缓存
@@ -250,19 +356,29 @@ public class ReadingActivity extends AppCompatActivity {
         }
 
         GlobalConfig.GetReadSetting(getApplicationContext());//读取阅读进度
+        Log.d("BookOpen", "读取阅读进度: chapternow=" + GlobalConfig.chapternow + ", Page=" + GlobalConfig.Page);
+
+        // 清除上一本书的解析缓存
+        LocalBookParser.clearCache();
 
         // 判断是否是本地书籍
         if (isLocalBook(url)) {
             // 本地书籍：从本地文件解析章节
+            Log.d("BookOpen", "本地书籍，开始解析章节");
             List<Chapter> chapters = LocalBookParser.parseChapters(url);
             GlobalConfig.list.addAll(chapters);
+            Log.d("BookOpen", "本地书籍解析完成: 章节数=" + chapters.size());
+            GetAndRead.ReadingBackground(GlobalConfig.chapternow);
         } else {
             // 网络书籍：从网络爬取
+            Log.d("BookOpen", "网络书籍，开始爬取章节");
             if (!ReadConfig.isDownload) {//isDownload默认未下载，isDownload==true返回false
                 GetAndRead.getChapter(url, chapternum);
+                Log.d("BookOpen", "爬取完成: GlobalConfig.list.size=" + GlobalConfig.list.size());
                 GetAndRead.ReadingBackground(GlobalConfig.chapternow);
             }
         }
+        Log.d("BookOpen", "initContent结束: GlobalConfig.list.size=" + GlobalConfig.list.size());
     }
 
     /**
@@ -274,103 +390,74 @@ public class ReadingActivity extends AppCompatActivity {
         // 本地路径特征：以/开头，或者是应用私有目录路径
         return url.startsWith("/") || url.contains("com.xmkanshu");
     }
-    
-    private class initReadTask extends AsyncTask<Void,Integer,Boolean>
-    {
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            openStartTime = System.currentTimeMillis();  // 记录开始时间
-            Log.d("BookOpen", "onPreExecute：开始加载书籍");
 
-            loadingDialog.setMessage("加载中...");
-            loadingDialog.setCancelable(true); // 是否可以按“返回键”消失
-            loadingDialog.setCanceledOnTouchOutside(false); // 点击加载框以外的区域
-            loadingDialog.show();
-        }
+    /**
+     * 显示设置对话框（替代原ReadPresenter.showSettingView）
+     */
+    public void showSettingView() {
+        DialogCreater.createReadSetting(this, readViewModel,
+                v -> showSettingDetailView(),
+                v -> {
+                    // 目录按钮点击：打开抽屉并加载章节列表
+                    drawerLayout.openDrawer(GravityCompat.START);
+                    loadChapterList();
+                },
+                v -> readViewModel.previousChapter(),
+                v -> readViewModel.nextChapter(),
+                new android.widget.SeekBar.OnSeekBarChangeListener() {
+                    @Override
+                    public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                        readViewModel.seekToChapter(progress);
+                    }
+                    @Override
+                    public void onStartTrackingTouch(android.widget.SeekBar seekBar) {}
+                    @Override
+                    public void onStopTrackingTouch(android.widget.SeekBar seekBar) {}
+                });
+    }
 
-        @Override
-        protected Boolean doInBackground(Void... voids) {
-            long taskStartTime = System.currentTimeMillis();  // 1. 任务开始计时
-            Log.d("doInBackground", "开始异步初始化");
-
-            if (!GlobalConfig.BookUrl.isEmpty()) {
-                GlobalConfig.BookUrl = "";
-            }
-            Intent intent = getIntent();
-            String bookUrl = intent.getStringExtra("link");
-            GlobalConfig.chapternum=intent.getIntExtra("chapternum",0);
-
-            // 新增日志：打印BookUrl的真实值（带引号，方便看是否有多余斜杠或空格）
-            Log.d("URL_DEBUG", "BookUrl的值：\"" + GlobalConfig.BookUrl + "\"");
-
-            String targetUrl;
-            // 判断是否是本地书籍
-            if (bookUrl != null && (bookUrl.startsWith("/") || bookUrl.contains("com.xmkanshu"))) {
-                // 本地书籍：直接使用本地路径
-                targetUrl = bookUrl;
-                GlobalConfig.BookUrl = bookUrl;
-                Log.d("URL_DEBUG", "本地书籍路径：\"" + targetUrl + "\"");
+    /**
+     * 加载章节列表到目录
+     */
+    private void loadChapterList() {
+        Log.d("BookOpen", "loadChapterList: GlobalConfig.list.size=" + GlobalConfig.list.size());
+        ListView listView = findViewById(R.id.listview_chapter_list);
+        if (listView != null && GlobalConfig.list.size() > 0) {
+            ChapterAdapter chapterAdapter = new ChapterAdapter(GlobalConfig.list, this);
+            listView.setAdapter(chapterAdapter);
+            // 设置默认选中项
+            if (GlobalConfig.chapternow >= 5) {
+                listView.setSelection(GlobalConfig.chapternow - 5);
             } else {
-                // 网络书籍：拼接域名
-                if (bookUrl != null) {
-                    bookUrl = bookUrl.replaceAll("^/+", ""); // 替换开头1个或多个/为空
-                } else {
-                    bookUrl = "";
-                }
-                GlobalConfig.BookUrl = bookUrl; // 更新全局变量
-                targetUrl = "https://www.uuubqg.cc/" + bookUrl;
-                Log.d("URL_DEBUG", "修复后最终URL：\"" + targetUrl + "\"");
+                listView.setSelection(0);
             }
-
-            ReadConfig.ReadSetting(ReadingActivity.this);
-
-            // 2. 初始化 Presenter 耗时
-            long presenterStartTime = System.currentTimeMillis();
-            // 关键修正：传入新域名 targetUrl，不再拼接旧域名！
-            initContent(targetUrl, GlobalConfig.chapternum);
-
-            mReadPresenter = new ReadPresenter(ReadingActivity.this);
-            long presenterEndTime = System.currentTimeMillis();
-
-             // 3. 加载章节内容耗时
-            long chapterStartTime = System.currentTimeMillis();
-            mReadPresenter.LoadChapterContent();
-
-            long chapterEndTime = System.currentTimeMillis();
-
-            // 4. 首次渲染耗时
-            long renderStartTime = System.currentTimeMillis();
-            Bitmap firstPage = mReadPresenter.changePageContent(0);
-            long renderEndTime = System.currentTimeMillis();
-
-            long taskEndTime = System.currentTimeMillis();
-            long totalDuration = taskEndTime - taskStartTime;
-
-            Log.d("doInBackground",
-                "异步初始化完成, （后台）总耗时: " + totalDuration + "ms, " +
-                "Presenter初始化: " + (presenterEndTime - presenterStartTime) + "ms, " +
-                "章节加载: " + (chapterEndTime - chapterStartTime) + "ms, " +
-                "首次渲染: " + (renderEndTime - renderStartTime) + "ms");
-
-            return null;
+            Log.d("BookOpen", "章节列表加载完成");
+        } else {
+            Log.e("BookOpen", "listView为空或章节列表为空");
         }
+    }
 
-        @Override
-        protected void onPostExecute(Boolean aBoolean) {
-            super.onPostExecute(aBoolean);
-//            mReadPresenter = new ReadPresenter(ReadingActivity.this);
-            if (!ReadConfig.isDark) {
-                intChapterStyle(R.color.default_read_color, R.color.default_font_color);
-            } else {
-                intChapterStyle(R.color.default_read_color, R.color.dark_font_color);
-            }
-//            mReadPresenter.LoadChapterContent();
-            long totalDuration = System.currentTimeMillis() - openStartTime;  // 计算总耗时
-            Log.d("BookOpen", "AsyncTask的从doInBackgrond到onPostExecute：书籍加载完成，用户感知总耗时: " + totalDuration + "ms");
+    /**
+     * 显示详细设置对话框
+     */
+    public void showSettingDetailView() {
+        DialogCreater.createReadDetailSetting(this, readViewModel);
+    }
 
-            loadingDialog.dismiss();
-            intStyle();
+    /**
+     * 加载章节内容（供ChapterAdapter调用）
+     */
+    public void loadChapterContent() {
+        readViewModel.loadChapterContent();
+    }
+
+    /**
+     * 更新页面显示（供ChapterAdapter调用）
+     */
+    public void updatePageDisplay() {
+        Bitmap bitmap = readViewModel.changePageContent(GlobalConfig.Page);
+        if (bitmap != null && tv_read != null) {
+            tv_read.setImageBitmap(bitmap);
         }
     }
 }

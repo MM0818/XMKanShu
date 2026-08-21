@@ -8,11 +8,12 @@ import androidx.fragment.app.Fragment;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -79,6 +80,7 @@ public class BookShelfFragment extends Fragment {
         localBookManager = new LocalBookManager(context);
         list=mDb.searchAll();
         adapter=new BookShelfAdapter(list,BookShelfFragment.this.getActivity());
+        adapter.setOnBookLongClickListener((position, book) -> showDeleteDialog(book));
         listView.setAdapter(adapter);
 
     }
@@ -201,15 +203,40 @@ public class BookShelfFragment extends Fragment {
 
     void Refresh()
     {
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                list.clear();
-                list.addAll(mDb.searchAll());
-                refreshP.setRefreshing(false);
-            }
-        }, 1000);
+        list.clear();
+        list.addAll(mDb.searchAll());
         adapter.notifyDataSetChanged();
+        refreshP.setRefreshing(false);
+    }
+
+    /**
+     * 显示删除确认弹窗
+     */
+    private void showDeleteDialog(Bookinfodb book) {
+        new AlertDialog.Builder(context)
+                .setTitle("删除书籍")
+                .setMessage("确定要删除《" + book.getName() + "》吗？")
+                .setPositiveButton("确定", (dialog, which) -> {
+                    // 删除数据库记录
+                    mDb.delete(book.getBookid());
+
+                    // 如果是本地书籍，同时删除文件
+                    if ("local".equals(book.getLinkfrom())) {
+                        String filePath = book.getLink();
+                        if (filePath != null) {
+                            java.io.File file = new java.io.File(filePath);
+                            if (file.exists()) {
+                                file.delete();
+                            }
+                        }
+                    }
+
+                    // 刷新书架
+                    Refresh();
+                    Toast.makeText(context, "已删除《" + book.getName() + "》", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
     @Override
     public void onStart() {

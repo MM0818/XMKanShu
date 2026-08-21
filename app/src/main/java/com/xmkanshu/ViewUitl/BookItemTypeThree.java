@@ -13,6 +13,7 @@ import com.xmkanshu.R;
 
 public class BookItemTypeThree extends RelativeLayout {
     private BookItemTypeThree.MyItemClicked myItemClicked;
+    private BookItemTypeThree.MyItemLongClicked myItemLongClicked;
     private RelativeLayout relativeLayout1;// 容器包含项目
     private TextView tv_name;// 书名
     public ImageView img_pic;//封面
@@ -32,6 +33,7 @@ public class BookItemTypeThree extends RelativeLayout {
         tv_name=(TextView)findViewById(R.id.tv_bookshelf_bookname);
         img_pic=(ImageView)findViewById(R.id.img_bookshelf_book);
         relativeLayout1.setOnClickListener(new BookItemTypeThree.MyOnClick());
+        relativeLayout1.setOnLongClickListener(new BookItemTypeThree.MyOnLongClick());
     }
 
     public String getName() {
@@ -83,6 +85,24 @@ public class BookItemTypeThree extends RelativeLayout {
 
     public void setMyItemClickedListener(BookItemTypeThree.MyItemClicked myItemClicked) {
         this.myItemClicked = myItemClicked;
+    }
+
+    private class MyOnLongClick implements OnLongClickListener {
+        @Override
+        public boolean onLongClick(View v) {
+            if (myItemLongClicked != null) {
+                myItemLongClicked.myItemLongClicked();
+            }
+            return true;
+        }
+    }
+
+    public interface MyItemLongClicked {
+        public void myItemLongClicked();
+    }
+
+    public void setMyItemLongClickedListener(BookItemTypeThree.MyItemLongClicked listener) {
+        this.myItemLongClicked = listener;
     }
 //    private Bitmap getBitmapFromRes(int resId) {
 //        Resources res = MyApplication.myApplication.getResources();

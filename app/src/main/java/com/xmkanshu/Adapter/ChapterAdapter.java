@@ -95,7 +95,7 @@ public class ChapterAdapter extends BaseAdapter {
 
         @Override
         protected Boolean doInBackground(Void... voids) {
-            activity.mReadPresenter.LoadChapterContent();
+            activity.loadChapterContent();
             GlobalConfig.SaveReadSetting(activity);
             GetAndRead.ReadingBackground(GlobalConfig.chapternow);
             return null;
@@ -104,7 +104,7 @@ public class ChapterAdapter extends BaseAdapter {
         @Override
         protected void onPostExecute(Boolean aBoolean) {
             super.onPostExecute(aBoolean);
-            activity.tv_read.setImageBitmap(activity.mReadPresenter.changePageContent(GlobalConfig.Page));
+            activity.updatePageDisplay();
             loadingDialog.dismiss();
         }
     }

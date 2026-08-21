@@ -24,6 +24,7 @@ public class BookShelfAdapter extends BaseAdapter {
     private List<Bookinfodb> list;
     private int sumCount;
     Activity activity;
+    private OnBookLongClickListener longClickListener;
     // 定义Glide的RequestOptions（复用，优化性能）
     private RequestOptions glideOptions;
 
@@ -117,6 +118,11 @@ public class BookShelfAdapter extends BaseAdapter {
         holder.bookItem2.setMyItemClickedListener(new MyOnEvenClick(position * 3 + 1));
         holder.bookItem3.setMyItemClickedListener(new MyOnEvenClick(position * 3 + 2)); // 之前是position*3+1，这里修正为+2
 
+        // 设置长按事件
+        holder.bookItem1.setMyItemLongClickedListener(new MyOnEvenLongClick(position * 3));
+        holder.bookItem2.setMyItemLongClickedListener(new MyOnEvenLongClick(position * 3 + 1));
+        holder.bookItem3.setMyItemLongClickedListener(new MyOnEvenLongClick(position * 3 + 2));
+
         return convertView;
     }
 
@@ -141,6 +147,30 @@ public class BookShelfAdapter extends BaseAdapter {
             intent.putExtra("link", list.get(pos).getLink());
             intent.putExtra("chapternum", list.get(pos).getChapternum());
             activity.startActivity(intent);
+        }
+    }
+
+    public interface OnBookLongClickListener {
+        void onBookLongClick(int position, Bookinfodb book);
+    }
+
+    public void setOnBookLongClickListener(OnBookLongClickListener listener) {
+        this.longClickListener = listener;
+    }
+
+    private class MyOnEvenLongClick implements BookItemTypeThree.MyItemLongClicked {
+        int pos = 0;
+
+        public MyOnEvenLongClick(int position) {
+            this.pos = position;
+        }
+
+        @Override
+        public void myItemLongClicked() {
+            if (pos >= list.size()) return;
+            if (longClickListener != null) {
+                longClickListener.onBookLongClick(pos, list.get(pos));
+            }
         }
     }
 }

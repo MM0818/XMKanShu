@@ -1,6 +1,7 @@
 import java.util.Date
 
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 //apply plugin: 'org.greenrobot.greendao'
 
 //用于生成时间
@@ -21,6 +22,17 @@ android {
         versionCode 7
         versionName "1.0.5.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Kotlin编译配置
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    // Java编译配置
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     buildTypes {
         release {
@@ -78,4 +90,16 @@ dependencies {
     // 添加Glide依赖
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
+
+    // Kotlin
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.0'
+
+    // ViewModel + LiveData
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.6.2'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'
+
+    // Kotlin协程
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
 }

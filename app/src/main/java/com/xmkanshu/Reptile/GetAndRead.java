@@ -182,153 +182,123 @@ public class GetAndRead {
     //1、内容分段=====================================================================================
     public String splitContentFirst(String stringcontent)
     {
-        /*
-         *处理文章第一步，分段落
-         */
-        if(stringcontent==""||stringcontent==null)
+        if(stringcontent==null || stringcontent.isEmpty())
         {
             stringcontent="错误！可能原因：\n1.网络错误，笔趣阁网络连接超时或您的网络错误，请刷新重试\n2.内容错误，该书不存在内容，笔趣阁网站部分书籍没有内容，请等待新书源\n3.链接错误，笔趣阁已更换该书籍内容链接，请提交反馈";
         }
 
         int count = stringcontent.length();
-        int istart = 0;  //当前遍历到的字符的索引
-        String tmp2=stringcontent.substring(1,2);  //取索引之间的字符串，不包括结果索引，这里是取索引为1的字符
-        String tmp=" ";
-        String contentstring="";  //这是用来拼接字符内容的
+        String tmp2 = count > 1 ? stringcontent.substring(1, 2) : " ";
+        StringBuilder sb = new StringBuilder(stringcontent.length());
 
-        //文本分段算法
-        for(int i=1;i<=count;i++)
-        {
-            if(i!=count)  //遍历字符串，遇到空格和换行符，就将其替换为固定格式
-            {
-                String nowWord=stringcontent.substring(istart,i);  //当前遍历到的字符（索引istart到i之间的字符串，不包括i）
-                String nextWord=stringcontent.substring(i,i+1);  //下一个字符（索引为i的字符）
+        // 文本分段算法（保留原算法逻辑，用StringBuilder替代O(n²)拼接）
+        for (int i = 1; i <= count; i++) {
+            if (i != count) {
+                String nowWord = stringcontent.substring(i - 1, i);
+                String nextWord = stringcontent.substring(i, i + 1);
 
-                if(nowWord.equals("　") && nextWord.equals("　"))  //如果当前字符和下一个字符都是空格，就替换为固定格式
-                {
-                    contentstring+="    "+"  ";  //段首，即四个英文空格（模仿中文排版的每段起点空两格，两个全角空格）+两个英文空格（字符间距是2）
-                    istart=i+1;
+                if (nowWord.equals("　") && nextWord.equals("　")) {
+                    sb.append("    ").append("  ");
+                    i++; // 跳过下一个全角空格，与原算法 istart=i+1 一致
+                } else if (nowWord.equals(" ") && nextWord.equals(tmp2)) {
+                    sb.append("\n          \n").append("  ");
+                    i++; // 跳过tmp2字符
+                } else {
+                    sb.append(nowWord);
                 }
-                else if(nowWord.equals(tmp)&&nextWord.equals(tmp2))  //如果当前字符和下一个字符都是换行符，就替换为固定格式
-                {
-                    contentstring+="\n          \n"+" "+" ";  //这个格式空格垫高段落间距，视觉上分段更清晰
-                    istart=i+1;
-//                        mRealLine++;
-                }
-                else
-                {
-                    contentstring+=(stringcontent.substring(istart,i)); //正常字符就直接拼接进来
-                    istart=i;
-                }
-            }else
-            {
-                contentstring+=stringcontent.substring(i-1,i);  //拼完最后一个字符，索引为i-1
+            } else {
+                sb.append(stringcontent.substring(i - 1, i));
             }
         }
-        return contentstring;  //返回分段好的字符串
+        return sb.toString();
     }
 
     //四、3.章节分页======================================================================================
-    public void PageSet(String content, int mPageLineNum, ConcurrentHashMap contentMap)  //ConcurrentHashMap线程安全存储
+    public void PageSet(String content, int mPageLineNum, ConcurrentHashMap contentMap)
     {
-        /*
-         *单章节分页,并将内容存入Hashmap
-         */
-        String[] arrtmp=content.split("\n");  //行文字数组
-        String contenttmp="";
-        int tmpcount=0;//单页行数
-        int Pagecount=1;//单章页数
-        
+        String[] arrtmp=content.split("\n");
+        StringBuilder contentBuilder = new StringBuilder();
+        int tmpcount=0;
+        int Pagecount=1;
+
         try{
-            //contentMap.put(0,GlobalConfig.list.get(GlobalConfig.chapternow).get("title"));
-
             Chapter currentChapter = GlobalConfig.list.get(GlobalConfig.chapternow);
-
-            //章节标题与内容分离
-            contentMap.put(0, currentChapter.getTitle()); // 用 getTitle() 获取章节标题
+            contentMap.put(0, currentChapter.getTitle());
         }catch (IndexOutOfBoundsException e)
         {
             e.printStackTrace();
         }
 
-        //基于屏幕高度的分页算法
         for(int i=0;i<arrtmp.length;i++)
         {
-            contenttmp+=arrtmp[i]+"\n";  //一行一行的存该页内容
+            contentBuilder.append(arrtmp[i]).append('\n');
             tmpcount++;
-            if(tmpcount==mPageLineNum)  //直到到达一页的最大文字行数时，分好一页内容
+            if(tmpcount==mPageLineNum)
             {
-                contentMap.put(Pagecount,contenttmp);  //存当前页数，以及页内容进哈希
+                contentMap.put(Pagecount, contentBuilder.toString());
                 Pagecount++;
                 tmpcount=0;
-                contenttmp="";
+                contentBuilder.setLength(0);
             }
         }
 
-        if(!contenttmp.isEmpty())  //处理某一页的内容不够最大行数的情况，一般是本章的最后一页
+        if(contentBuilder.length() > 0)
         {
-            contentMap.put(Pagecount,contenttmp);
+            contentMap.put(Pagecount, contentBuilder.toString());
             Pagecount++;
         }
-        /*
-         *如果章节过短
-         */
-        if(Pagecount==0)  //只有一页内容，而且该页内容还没有到达最大行数
+
+        if(Pagecount==0)
         {
-            contentMap.put(1,contenttmp);
+            contentMap.put(1, contentBuilder.toString());
             GlobalConfig.PageTotal=1;
-        }else if(Pagecount==1)  //只有一页内容，且该页内容已经到达最大行数
+        }else if(Pagecount==1)
         {
-            contentMap.put(1,contenttmp);
-            GlobalConfig.PageTotal=2;  //强制设为2页
+            contentMap.put(1, contentBuilder.toString());
+            GlobalConfig.PageTotal=2;
             Pagecount=2;
         }else
         {
             GlobalConfig.PageTotal=Pagecount;
         }
-
     }
 
-    //四、2.自动换行计算=====================================================================================           
+    //四、2.自动换行计算=====================================================================================
     public String splitcontentSecond(String content,int FontSize,int measuredWidth)
     {
-        /*
-         *段落添加分隔符,自动换行
-         */
-        String[] arrtmp=content.split("\n");  //利用文本按换行符将文本分割为段落数组
-        TextPaint textPaint2 = new TextPaint ( );  //创建一个文本画笔，用于测量文本宽度，这个类里的方法可以算字符串宽度！！（横向）这是和FontMetrics类（单个字体、纵向）的区别噢
-        String returntmp="";  //返回的字符串，用于存储自动换行后的文本
+        String[] arrtmp=content.split("\n");
+        TextPaint textPaint2 = new TextPaint();
+        textPaint2.setTextSize(FontSize);
+        StringBuilder sb = new StringBuilder(content.length() + content.length() / 10);
 
-        //一段一段的动态换行处理
+        float maxWidth = measuredWidth - FontSize;
+
         for(int i=0;i<arrtmp.length;i++)
         {
-            if(!arrtmp[i].isEmpty())
-            {
-                int start=0;
-                //遍历一个段落中的每个字符，判断是否需要换行
-                for(int j=0;j<arrtmp[i].length();j++)  //处理每一段文本，arrtmp代表的是一段文字的分组哈
-                {
-                    textPaint2.setTextSize(FontSize);
-                    float textwidth=textPaint2.measureText(arrtmp[i].substring(start,j));   //利用measureText方法算出当前遍历字符串宽度
+            if(i > 0) sb.append('\n');
 
-                    //判断当前子字符串是否超过了测量宽度（如果超过，就换行），自适应屏幕尺寸
-                    if(textwidth>=measuredWidth-FontSize)
-                    {
-                        arrtmp[i]=arrtmp[i].substring(0,j)+"\n"+arrtmp[i].substring(j);  //利用字符串这个按索引分割方法来拼接字符，中间插入换行符
-                        start=j;
-                    }
-                    textPaint2.reset();  //把 TextPaint 对象的所有属性恢复成默认值，方便复用
+            String line = arrtmp[i];
+            if(line.isEmpty()) continue;
+
+            int start = 0;
+            // 不修改原数组，直接在原始字符串上测量并插入换行
+            for(int j=1; j<=line.length(); j++)
+            {
+                float textwidth = textPaint2.measureText(line, start, j);
+
+                if(textwidth >= maxWidth)
+                {
+                    sb.append(line, start, j);
+                    sb.append('\n');
+                    start = j;
                 }
             }
-            if(returntmp.isEmpty())
-            {
-                returntmp=returntmp+arrtmp[i];
-            }else
-            {
-                returntmp=returntmp+"\n"+arrtmp[i];
+            // 追加剩余部分
+            if(start < line.length()) {
+                sb.append(line, start, line.length());
             }
         }
-        return returntmp;
+        return sb.toString();
     }
 
     // 新增方法：获取书城首页数据 - 适配现有BookInfo模型
