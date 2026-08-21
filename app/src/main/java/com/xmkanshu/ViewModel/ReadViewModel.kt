@@ -67,9 +67,10 @@ class ReadViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 加载章节内容
      * 使用协程在IO线程执行耗时操作，主线程更新UI
+     * @param targetPage 加载完成后要显示的页码，默认0（标题页），传-1表示显示最后一页
      */
-    fun loadChapterContent() {
-        Log.d(TAG, "loadChapterContent被调用, chapternow=${GlobalConfig.chapternow}, list.size=${GlobalConfig.list.size}")
+    fun loadChapterContent(targetPage: Int = 0) {
+        Log.d(TAG, "loadChapterContent被调用, chapternow=${GlobalConfig.chapternow}, list.size=${GlobalConfig.list.size}, targetPage=$targetPage")
 
         viewModelScope.launch {
             _chapterLoadState.value = ChapterLoadState.Loading
@@ -85,12 +86,20 @@ class ReadViewModel(application: Application) : AndroidViewModel(application) {
 
                 Log.d(TAG, "章节内容加载完成, contentMap.size=${GlobalConfig.contentMap.size}, title=${result.title}")
 
+                // 根据targetPage设置最终页码
+                GlobalConfig.Page = if (targetPage == -1) {
+                    // -1 表示跳转到末尾（上一章最后一页正文）
+                    (GlobalConfig.PageTotal - 1).coerceAtLeast(0)
+                } else {
+                    targetPage.coerceIn(0, (GlobalConfig.PageTotal - 1).coerceAtLeast(0))
+                }
+
                 // 更新UI
                 _chapterTitle.value = result.title
                 _chapterLoadState.value = ChapterLoadState.Success
 
                 val totalTime = System.currentTimeMillis() - startTime
-                Log.d(TAG, "章节加载完成: ${GlobalConfig.chapternow}, 总耗时: ${totalTime}ms")
+                Log.d(TAG, "章节加载完成: ${GlobalConfig.chapternow}, 总耗时: ${totalTime}ms, 最终页码: ${GlobalConfig.Page}")
 
             } catch (e: Exception) {
                 Log.e(TAG, "加载章节失败", e)
@@ -363,10 +372,8 @@ class ReadViewModel(application: Application) : AndroidViewModel(application) {
     fun previousChapter() {
         if (GlobalConfig.chapternow > 0) {
             GlobalConfig.chapternow -= 1
-            GlobalConfig.Page = 0
-            loadChapterContent()
-            val bitmap = changePageContent(GlobalConfig.Page)
-            _currentPageBitmap.postValue(bitmap)
+            loadChapterContent(targetPage = -1)
+            // targetPage=-1 表示跳转到上一章末尾，渲染由 observer 在加载完成后触发
 
             if (!ReadConfig.isDownload) {
                 GetAndRead.ReadingBackground(GlobalConfig.chapternow)
@@ -380,10 +387,8 @@ class ReadViewModel(application: Application) : AndroidViewModel(application) {
     fun nextChapter() {
         if (GlobalConfig.chapternow < GlobalConfig.list.size - 1) {
             GlobalConfig.chapternow += 1
-            GlobalConfig.Page = 0
-            loadChapterContent()
-            val bitmap = changePageContent(GlobalConfig.Page)
-            _currentPageBitmap.postValue(bitmap)
+            loadChapterContent() // 默认targetPage=0，显示标题页
+            // 渲染由 _chapterLoadState observer 在加载完成后触发，避免竞态导致空白页
 
             if (!ReadConfig.isDownload) {
                 GetAndRead.ReadingBackground(GlobalConfig.chapternow)
@@ -397,10 +402,8 @@ class ReadViewModel(application: Application) : AndroidViewModel(application) {
     fun seekToChapter(progress: Int) {
         if (GlobalConfig.list.size > 0) {
             GlobalConfig.chapternow = (GlobalConfig.list.size - 1) * progress / 100
-            GlobalConfig.Page = 0
-            loadChapterContent()
-            val bitmap = changePageContent(GlobalConfig.Page)
-            _currentPageBitmap.postValue(bitmap)
+            loadChapterContent() // 默认targetPage=0，显示标题页
+            // 渲染由 _chapterLoadState observer 在加载完成后触发，避免竞态导致空白页
         }
     }
 

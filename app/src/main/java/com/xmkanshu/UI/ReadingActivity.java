@@ -58,6 +58,7 @@ public class ReadingActivity extends AppCompatActivity {
     private ReadViewModel readViewModel;
     LoadingDialog loadingDialog;
     private long openStartTime;  // 添加成员变量记录开始时间指标
+    private boolean pendingChapterLoad = false; // 跨章节翻页时标记，等待observer渲染
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,6 +99,7 @@ public class ReadingActivity extends AppCompatActivity {
                     long startTime = System.currentTimeMillis();  // 记录开始时间
 
                     GlobalConfig.Page = GlobalConfig.Page + 1;  //阅读页码数+1
+                    pendingChapterLoad = false;
                     if (GlobalConfig.chapternow == GlobalConfig.list.size() - 1 && GlobalConfig.Page == GlobalConfig.PageTotal) { //本书最后一章最后一页
                         GlobalConfig.chapternow = GlobalConfig.list.size() - 1;
                         GlobalConfig.Page = GlobalConfig.Page - 1;
@@ -107,8 +109,8 @@ public class ReadingActivity extends AppCompatActivity {
                              *本章末尾，切换章节标签，跳转下一章节
                              */
                             GlobalConfig.chapternow += 1;
-                            readViewModel.loadChapterContent();
-                            GlobalConfig.Page = 0;
+                            readViewModel.loadChapterContent(0);
+                            pendingChapterLoad = true;
                             if (!ReadConfig.isDownload) {
                                 GetAndRead.ReadingBackground(GlobalConfig.chapternow);
                             }
@@ -116,9 +118,13 @@ public class ReadingActivity extends AppCompatActivity {
                     }
 
                     Log.d("PageSet", "Page=" + GlobalConfig.Page + "Cahapter:" + GlobalConfig.chapternow);
-                    bitmap2 = readViewModel.changePageContent(GlobalConfig.Page);
+                    if (!pendingChapterLoad) {
+                        // 同章内翻页，contentMap已就绪，直接渲染
+                        bitmap2 = readViewModel.changePageContent(GlobalConfig.Page);
+                        tv_read.setImageBitmap(bitmap2);
+                    }
+                    // 跨章节时由 chapterLoadState observer 在加载完成后渲染，避免空白页
                     GlobalConfig.SaveReadSetting(getApplicationContext());//保存阅读进度
-                    tv_read.setImageBitmap(bitmap2);
 
                     long duration = System.currentTimeMillis() - startTime;  // 计算耗时
                     Log.d("PagePerformance", "右翻页总耗时: " + duration + "ms, " + "章节: " + GlobalConfig.chapternow + ", 页码: " + GlobalConfig.Page);
@@ -135,22 +141,27 @@ public class ReadingActivity extends AppCompatActivity {
                 if (isLeft) {
                     long startTime = System.currentTimeMillis();  // 记录开始时间
                     GlobalConfig.Page = GlobalConfig.Page - 1;
+                    pendingChapterLoad = false;
                     if (GlobalConfig.Page < 0 && GlobalConfig.chapternow != 0) {
                         /*
-                         *本章起始，切换章节标签，跳转上一章节
+                         *本章起始，切换章节标签，跳转上一章节末尾
                          */
                         GlobalConfig.chapternow = GlobalConfig.chapternow - 1;
-                        readViewModel.loadChapterContent();
-                        GlobalConfig.Page = GlobalConfig.PageTotal - 1;
+                        readViewModel.loadChapterContent(-1);
+                        pendingChapterLoad = true;
                     } else if (GlobalConfig.Page <= 0 && GlobalConfig.chapternow == 0) {
                         GlobalConfig.chapternow = 0;
-                        readViewModel.loadChapterContent();
-                        GlobalConfig.Page = 0;
+                        readViewModel.loadChapterContent(0);
+                        pendingChapterLoad = true;
                     }
                     Log.d("PageSet", "Page=" + GlobalConfig.Page + "Cahapter:" + GlobalConfig.chapternow);
-                    bitmap = readViewModel.changePageContent(GlobalConfig.Page);
+                    if (!pendingChapterLoad) {
+                        // 同章内翻页，contentMap已就绪，直接渲染
+                        bitmap = readViewModel.changePageContent(GlobalConfig.Page);
+                        tv_read.setImageBitmap(bitmap);
+                    }
+                    // 跨章节时由 chapterLoadState observer 在加载完成后渲染，避免空白页
                     GlobalConfig.SaveReadSetting(getApplicationContext());//保存阅读进度
-                    tv_read.setImageBitmap(bitmap);
 
                     long duration = System.currentTimeMillis() - startTime;  // 计算耗时
                     Log.d("PagePerformance", "左翻页总耗时: " + duration + "ms, " + "章节: " + GlobalConfig.chapternow + ", 页码: " + GlobalConfig.Page);
@@ -248,11 +259,13 @@ public class ReadingActivity extends AppCompatActivity {
         initContent(targetUrl, chapternum);
         Log.d("BookOpen", "initContent后: GlobalConfig.list.size=" + GlobalConfig.list.size() +
                 ", chapternow=" + GlobalConfig.chapternow +
+                ", Page=" + GlobalConfig.Page +
                 ", measuredWidth=" + GlobalConfig.measuredWidth +
                 ", measuredHeigtt=" + GlobalConfig.measuredHeigtt);
 
-        // 使用ViewModel的协程加载章节内容
-        readViewModel.loadChapterContent();
+        // 使用ViewModel的协程加载章节内容，传入保存的页码以恢复阅读位置
+        int savedPage = GlobalConfig.Page;
+        readViewModel.loadChapterContent(savedPage);
 
         // 观察加载状态
         readViewModel.getChapterLoadState().observe(this, state -> {
@@ -263,8 +276,8 @@ public class ReadingActivity extends AppCompatActivity {
                 loadingDialog.dismiss();
                 intStyle();
 
-                // 绘制第一页
-                Bitmap firstPage = readViewModel.changePageContent(0);
+                // 绘制当前页（由loadChapterContent的targetPage决定是第0页还是末尾页）
+                Bitmap firstPage = readViewModel.changePageContent(GlobalConfig.Page);
                 if (firstPage != null && tv_read != null) {
                     tv_read.setImageBitmap(firstPage);
                 }
@@ -448,7 +461,7 @@ public class ReadingActivity extends AppCompatActivity {
      * 加载章节内容（供ChapterAdapter调用）
      */
     public void loadChapterContent() {
-        readViewModel.loadChapterContent();
+        readViewModel.loadChapterContent(0);
     }
 
     /**
