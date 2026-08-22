@@ -28,6 +28,7 @@ import androidx.core.view.GravityCompat;
 import com.hb.dialog.dialog.LoadingDialog;
 import com.xmkanshu.Adapter.ChapterAdapter;
 import com.xmkanshu.Data.GlobalConfig;
+import com.xmkanshu.Data.PagePerfTracker;
 import com.xmkanshu.Data.ReadConfig;
 import com.xmkanshu.Manager.LocalBookParser;
 import com.xmkanshu.Model.Chapter;
@@ -59,6 +60,9 @@ public class ReadingActivity extends AppCompatActivity {
     LoadingDialog loadingDialog;
     private long openStartTime;  // 添加成员变量记录开始时间指标
     private boolean pendingChapterLoad = false; // 跨章节翻页时标记，等待observer渲染
+    private long flipStartTime = 0;             // 跨章节翻页起始时间（用于PagePerfTracker）
+    private boolean initialLoadDone = false;    // 区分初始加载和后续章节切换
+    private int flipCount = 0;                  // 翻页计数，每10次输出统计日志
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,12 +126,15 @@ public class ReadingActivity extends AppCompatActivity {
                         // 同章内翻页，contentMap已就绪，直接渲染
                         bitmap2 = readViewModel.changePageContent(GlobalConfig.Page);
                         tv_read.setImageBitmap(bitmap2);
+                        long duration = System.currentTimeMillis() - startTime;
+                        PagePerfTracker.getInstance().recordFlip(PagePerfTracker.FlipScenario.SAME_CHAPTER, duration);
+                        logFlipStats();
+                    } else {
+                        // 跨章节：记录起始时间，observer 完成后统计
+                        flipStartTime = startTime;
                     }
                     // 跨章节时由 chapterLoadState observer 在加载完成后渲染，避免空白页
                     GlobalConfig.SaveReadSetting(getApplicationContext());//保存阅读进度
-
-                    long duration = System.currentTimeMillis() - startTime;  // 计算耗时
-                    Log.d("PagePerformance", "右翻页总耗时: " + duration + "ms, " + "章节: " + GlobalConfig.chapternow + ", 页码: " + GlobalConfig.Page);
 
                     try {
                         bitmap = null;
@@ -159,12 +166,15 @@ public class ReadingActivity extends AppCompatActivity {
                         // 同章内翻页，contentMap已就绪，直接渲染
                         bitmap = readViewModel.changePageContent(GlobalConfig.Page);
                         tv_read.setImageBitmap(bitmap);
+                        long duration = System.currentTimeMillis() - startTime;
+                        PagePerfTracker.getInstance().recordFlip(PagePerfTracker.FlipScenario.SAME_CHAPTER, duration);
+                        logFlipStats();
+                    } else {
+                        // 跨章节：记录起始时间，observer 完成后统计
+                        flipStartTime = startTime;
                     }
                     // 跨章节时由 chapterLoadState observer 在加载完成后渲染，避免空白页
                     GlobalConfig.SaveReadSetting(getApplicationContext());//保存阅读进度
-
-                    long duration = System.currentTimeMillis() - startTime;  // 计算耗时
-                    Log.d("PagePerformance", "左翻页总耗时: " + duration + "ms, " + "章节: " + GlobalConfig.chapternow + ", 页码: " + GlobalConfig.Page);
 
                     try {
                         bitmap2 = null;
@@ -273,14 +283,23 @@ public class ReadingActivity extends AppCompatActivity {
                 long totalDuration = System.currentTimeMillis() - openStartTime;
                 Log.d("BookOpen", "书籍加载完成，用户感知总耗时: " + totalDuration + "ms");
 
-                loadingDialog.dismiss();
-                intStyle();
-
                 // 绘制当前页（由loadChapterContent的targetPage决定是第0页还是末尾页）
                 Bitmap firstPage = readViewModel.changePageContent(GlobalConfig.Page);
                 if (firstPage != null && tv_read != null) {
                     tv_read.setImageBitmap(firstPage);
                 }
+
+                if (initialLoadDone && flipStartTime > 0) {
+                    // 非初始加载：记录跨章节翻页耗时
+                    long crossDuration = System.currentTimeMillis() - flipStartTime;
+                    PagePerfTracker.getInstance().recordFlip(PagePerfTracker.FlipScenario.CROSS_CHAPTER, crossDuration);
+                    flipStartTime = 0;
+                    logFlipStats();
+                }
+                initialLoadDone = true;
+
+                loadingDialog.dismiss();
+                intStyle();
             } else if (state instanceof ReadViewModel.ChapterLoadState.Error) {
                 loadingDialog.dismiss();
                 Log.e("BookOpen", "加载失败: " + ((ReadViewModel.ChapterLoadState.Error) state).getMessage());
@@ -447,6 +466,16 @@ public class ReadingActivity extends AppCompatActivity {
             Log.d("BookOpen", "章节列表加载完成");
         } else {
             Log.e("BookOpen", "listView为空或章节列表为空");
+        }
+    }
+
+    /**
+     * 每10次翻页输出一次性能统计日志
+     */
+    private void logFlipStats() {
+        flipCount++;
+        if (flipCount % 10 == 0) {
+            PagePerfTracker.getInstance().logStats();
         }
     }
 

@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.xmkanshu.Adapter.ChapterAdapter
 import com.xmkanshu.Cache.BookContentCache
 import com.xmkanshu.Data.GlobalConfig
+import com.xmkanshu.Data.PagePerfTracker
 import com.xmkanshu.Data.ReadConfig
 import com.xmkanshu.Model.Chapter
 import com.xmkanshu.R
@@ -187,6 +188,12 @@ class ReadViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "分页完成: contentMap.size=${GlobalConfig.contentMap.size}, PageTotal=${GlobalConfig.PageTotal}")
         val processEndTime = System.currentTimeMillis()
 
+        // 记录跨章翻页分环节耗时到 PagePerfTracker
+        PagePerfTracker.getInstance().recordSubStep(
+            cacheEndTime - cacheStartTime,
+            processEndTime - processStartTime
+        )
+
         // 4. 获取章节标题
         var title = "未知章节"
         try {
@@ -312,6 +319,9 @@ class ReadViewModel(application: Application) : AndroidViewModel(application) {
             canvas?.drawText("内容加载失败", 50f, 100f, textPaint)
         }
         val drawEndTime = System.currentTimeMillis()
+
+        // 记录绘制耗时到 PagePerfTracker
+        PagePerfTracker.getInstance().recordDrawTime(drawEndTime - drawStartTime)
 
         // 输出性能日志
         val totalTime = System.currentTimeMillis() - startTime
