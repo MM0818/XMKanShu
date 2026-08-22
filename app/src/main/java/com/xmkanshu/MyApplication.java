@@ -2,6 +2,7 @@ package com.xmkanshu;
 
 import android.app.Application;
 import android.util.Log;
+import com.xmkanshu.Cache.BookInfoCache;
 import com.xmkanshu.Data.PreloadConfig;
 import com.xmkanshu.Manager.BookDataManager;
 
@@ -36,5 +37,6 @@ public class MyApplication extends Application {
         super.onTrimMemory(level);
         Log.d(TAG, "onTrimMemory called, level=" + level);
         PreloadConfig.setTrimLevel(level);
+        BookInfoCache.trimMemory(level);
     }
 }

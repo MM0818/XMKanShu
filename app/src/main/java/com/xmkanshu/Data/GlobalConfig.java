@@ -15,7 +15,6 @@ import com.xmkanshu.greendao.model.Bookinfodb;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,10 +23,7 @@ import static android.content.Context.MODE_PRIVATE;
 
 
 public class GlobalConfig {
-//    public static Map<String,Picture> map=new HashMap<String,Picture>();
-//    public static ConcurrentHashMap<String,Picture> map=new ConcurrentHashMap<String,Picture>();
-//    public static Map<String,Book> bookmap=new HashMap<String,Book>();
-    public static Map<String,BookInfo> bookmap=new ConcurrentHashMap<String,BookInfo>();
+    // bookmap 已迁移至 BookInfoCache 内部的 LruCache，避免无界缓存导致 OOM
     public static ConcurrentHashMap<Integer,String> contentMap=new ConcurrentHashMap();//页对应的内容
     public static int measuredWidth=0;//控件列宽度
     public static int measuredHeigtt=0;//控件高度
