@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import com.xmkanshu.Data.PreloadConfig;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -114,20 +116,25 @@ public class GetAndRead {
         Thread thread1 = new Thread(new Runnable() {
             @Override
             public void run() {
+                // 动态计算预加载章节数（基于设备内存、翻页速度、章节大小）
+                int preloadCount = PreloadConfig.calculatePreloadCount();
                 int tmpcount = chapternow - 2;
-                for (int i = 0; i < 5; i++) {
+                int startIndex = Math.max(0, tmpcount + 1);
+                int endIndex = Math.min(startIndex + preloadCount - 1, GlobalConfig.list.size() - 1);
+                Log.d("GetAndRead", "预加载范围: 第" + startIndex + "章~第" + endIndex + "章, 共" + preloadCount + "章");
+                for (int i = 0; i < preloadCount; i++) {
                     tmpcount += 1;
                     // 关键修复：使用 && 且检查边界
                     if (tmpcount >= 0 && tmpcount < GlobalConfig.list.size()) {
                         try {
                             Chapter chapter = GlobalConfig.list.get(tmpcount);
-                            
+
                             //===三、缓存机制=================================================================================
                             //1、内容缓存：在ReadPresenter-LoadChapterContent方法中实现=================================================================================
                             //缓存命中时，预下载28页内容，预下载成功存在缓存里，即使没网也能看完这28页，好处：减少网络请求，提高阅读体验和响应速度，支持离线阅读
                             // 缓存未命中时，触发网络请求获取内容
                             BookContentCache.getCache(chapter.getUrl());
-                        
+
                         } catch (Exception e) {
                             Log.e("GetAndRead", "预加载章节" + tmpcount + "失败: " + e.getMessage());
                         }

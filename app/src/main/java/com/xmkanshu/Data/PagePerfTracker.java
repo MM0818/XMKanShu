@@ -55,6 +55,12 @@ public class PagePerfTracker {
     // 本轮10次翻页涉及的书籍URL集合（用于日志定位）
     private final Set<String> batchBookUrls = new HashSet<>();
 
+    // 用户翻页时间戳记录（用于计算真实翻页间隔，而非 Canvas 绘制耗时）
+    private long lastFlipTimestamp = 0;
+    private final long[] flipIntervals = new long[BUFFER_SIZE];
+    private int intervalIndex = 0;
+    private int intervalCount = 0;
+
     private PagePerfTracker() {}
 
     /**
@@ -79,6 +85,19 @@ public class PagePerfTracker {
      * @param totalMs    总耗时（ms）
      */
     public void recordFlip(FlipScenario scenario, long totalMs) {
+        // 记录用户翻页时间戳间隔（两次翻页之间的真实时间间隔）
+        long now = System.currentTimeMillis();
+        if (lastFlipTimestamp > 0) {
+            long interval = now - lastFlipTimestamp;
+            // 过滤异常值：间隔太短（<100ms，可能是误触）或太长（>60s，可能是中途离开）
+            if (interval >= 100 && interval <= 60000) {
+                flipIntervals[intervalIndex] = interval;
+                intervalIndex = (intervalIndex + 1) % BUFFER_SIZE;
+                if (intervalCount < BUFFER_SIZE) intervalCount++;
+            }
+        }
+        lastFlipTimestamp = now;
+
         // 记录本轮涉及的书籍URL
         String bookUrl = GlobalConfig.BookUrl;
         if (bookUrl != null && !bookUrl.isEmpty()) {
@@ -156,6 +175,21 @@ public class PagePerfTracker {
     }
 
     /**
+     * 获取用户平均翻页间隔（ms），供 PreloadConfig 判断用户翻页速度
+     * 基于两次用户翻页操作之间的真实时间间隔（非 Canvas 绘制耗时）
+     *
+     * @return 平均翻页间隔（ms），无数据时返回 0
+     */
+    public long getAverageFlipInterval() {
+        if (intervalCount == 0) return 0;
+        long total = 0;
+        for (int i = 0; i < intervalCount; i++) {
+            total += flipIntervals[i];
+        }
+        return total / intervalCount;
+    }
+
+    /**
      * 重置所有统计数据
      */
     public void reset() {
@@ -164,10 +198,14 @@ public class PagePerfTracker {
         Arrays.fill(cacheTimes, 0);
         Arrays.fill(processTimes, 0);
         Arrays.fill(drawTimes, 0);
+        Arrays.fill(flipIntervals, 0);
         sameIndex = 0;
         sameCount = 0;
         crossIndex = 0;
         crossCount = 0;
+        lastFlipTimestamp = 0;
+        intervalIndex = 0;
+        intervalCount = 0;
         batchBookUrls.clear();
     }
 

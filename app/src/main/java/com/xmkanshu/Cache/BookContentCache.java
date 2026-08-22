@@ -123,4 +123,20 @@ public class BookContentCache {
     {
         cacheMap.clear();
     }
+
+    /**
+     * 获取已缓存章节的平均内容大小（字节），供 PreloadConfig 估算单章内存占用
+     *
+     * @return 平均字节数，无缓存时返回 0
+     */
+    public static long getAverageContentSize() {
+        if (cacheMap.isEmpty()) return 0;
+        long totalBytes = 0;
+        for (String content : cacheMap.values()) {
+            if (content != null) {
+                totalBytes += content.length() * 2; // Java char ≈ 2 bytes
+            }
+        }
+        return totalBytes / cacheMap.size();
+    }
 }
