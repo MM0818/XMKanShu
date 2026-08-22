@@ -71,7 +71,8 @@ public class LocalBookParser {
 
                 // 如果没有找到章节，把整个文件作为一章
                 if (chapterStartLines.isEmpty()) {
-                    chapters.add(new Chapter("全文", "local_chapter_0"));
+                    int pathHash = Math.abs(filePath.hashCode());
+                    chapters.add(new Chapter("全文", "local_" + pathHash + "_chapter_0"));
                     // 缓存：整本书作为一章
                     cachedFilePath = filePath;
                     cachedLines = lines;
@@ -85,10 +86,11 @@ public class LocalBookParser {
                 cachedLines = lines;
                 cachedChapterStartLines = chapterStartLines;
 
-                // 创建章节对象
+                // 创建章节对象，key 包含文件路径哈希以区分不同书籍
+                int pathHash = Math.abs(filePath.hashCode());
                 for (int i = 0; i < chapterStartLines.size(); i++) {
                     String title = chapterTitles.get(i);
-                    String chapterId = "local_chapter_" + i;
+                    String chapterId = "local_" + pathHash + "_chapter_" + i;
                     chapters.add(new Chapter(title, chapterId));
                 }
 

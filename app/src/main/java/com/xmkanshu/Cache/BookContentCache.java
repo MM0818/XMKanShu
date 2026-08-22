@@ -54,8 +54,8 @@ public class BookContentCache {
         // 解决方法：使用ConcurrentHashMap，它是线程安全的，支持多线程并发读写。
 
         String content;
-        // 判断是否是本地书籍章节
-        if (url != null && url.startsWith("local_chapter_")) {
+        // 判断是否是本地书籍章节（key 格式：local_<pathHash>_chapter_<index>）
+        if (url != null && url.startsWith("local_")) {
             // 本地书籍：从本地文件读取章节内容
             content = getLocalChapterContent(url);
         } else {
@@ -71,14 +71,15 @@ public class BookContentCache {
 
     /**
      * 获取本地章节内容
-     * @param chapterId 章节ID，格式为 "local_chapter_索引"
+     * @param chapterId 章节ID，格式为 "local_<pathHash>_chapter_<索引>"
      * @return 章节内容
      */
     private static String getLocalChapterContent(String chapterId) {
         try {
-            // 从章节ID中提取索引
-            String indexStr = chapterId.replace("local_chapter_", "");
-            int chapterIndex = Integer.parseInt(indexStr);
+            // 从章节ID中提取索引：找最后一个 "_chapter_" 后面的数字
+            int marker = chapterId.lastIndexOf("_chapter_");
+            if (marker == -1) return "";
+            int chapterIndex = Integer.parseInt(chapterId.substring(marker + "_chapter_".length()));
 
             // 获取本地文件路径
             String filePath = GlobalConfig.BookUrl;

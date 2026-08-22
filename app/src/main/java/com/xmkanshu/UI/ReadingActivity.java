@@ -391,6 +391,7 @@ public class ReadingActivity extends AppCompatActivity {
         Log.d("BookOpen", "读取阅读进度: chapternow=" + GlobalConfig.chapternow + ", Page=" + GlobalConfig.Page);
 
         // 清除上一本书的解析缓存
+        // 章节内容缓存（BookContentCache）不需要清除，因为本地书 key 已包含文件路径哈希，不同书天然隔离
         LocalBookParser.clearCache();
 
         // 判断是否是本地书籍
